@@ -44,7 +44,7 @@
         <input id="personInput" type="text" placeholder="이름 입력" maxlength="20" autocomplete="off" enterkeyhint="done">
         <button class="add-btn" id="addPersonBtn">추가</button>
       </div>
-      <label class="toggle-row"><input id="leftPersonToggle" type="checkbox"><span class="switch"></span>좌타(왼손잡이)로 등록</label>
+      <label class="toggle-row"><input id="leftPersonToggle" type="checkbox"><span class="switch"></span>좌타로 등록</label>
       <div class="empty" id="personEmpty">등록된 참석자가 없습니다</div>
       <div class="chips" id="personList"></div>
     </section>
@@ -74,7 +74,8 @@
       <ol>
         <li>방 번호를 입력하면 모바일에서는 숫자 키패드가 표시됩니다.</li>
         <li>방은 등록 후 <b>“1번 방”</b>처럼 표시되며, 좌타방으로 설정할 수 있습니다.</li>
-        <li>참석자는 이름을 입력하고, 좌타(왼손잡이)라면 토글을 켜서 등록합니다. 처음 등록한 이름은 참가자 DB에 저장되어 다음 모임에서도 목록에서 바로 선택할 수 있습니다.</li>
+        <li>참석자는 이름을 입력하고, 좌타라면 토글을 켜서 등록합니다. 등록하면 이름 옆에 <b>(좌타)</b>가 표시되고, 토글은 자동으로 초기화됩니다.</li>
+        <li>처음 등록한 이름은 참가자 DB에 저장되어 다음 모임에서도 목록에서 바로 선택할 수 있습니다.</li>
         <li>방 수와 참석자 수가 맞아야 랜덤 방배정이 가능합니다.</li>
         <li>배정 결과는 모든 방에 2~3명이 들어가도록 생성되며, 좌타 참석자는 좌타방에 우선 배정됩니다.</li>
         <li>방 목록과 배정 결과 모두 <b>방 번호 오름차순</b>으로 표시됩니다.</li>
