@@ -44,6 +44,7 @@
         <input id="personInput" type="text" placeholder="이름 입력" maxlength="20" autocomplete="off" enterkeyhint="done">
         <button class="add-btn" id="addPersonBtn">추가</button>
       </div>
+      <label class="toggle-row"><input id="leftPersonToggle" type="checkbox"><span class="switch"></span>좌타(왼손잡이)로 등록</label>
       <div class="empty" id="personEmpty">등록된 참석자가 없습니다</div>
       <div class="chips" id="personList"></div>
     </section>
@@ -54,14 +55,14 @@
         <strong>참가자 데이터베이스</strong>
         <span class="count" id="databaseCount">0명</span>
       </div>
-      <p class="db-guide">참가자 DB에는 <b>이름만</b> 저장되며, <b>이 기기의 브라우저</b>에 로컬로 보관됩니다. 한 번 등록한 이름은 다음 모임에서도 목록에 남아있어 눌러서 바로 등록할 수 있습니다.</p>
+      <p class="db-guide">참가자 DB에는 <b>이름과 좌타 여부</b>가 저장되며, <b>이 기기의 브라우저</b>에 로컬로 보관됩니다. 한 번 등록한 이름은 다음 모임에서도 목록에 남아있어 눌러서 바로 등록할 수 있습니다.</p>
       <div class="database-list" id="databaseList"></div>
       <div class="db-empty" id="databaseEmpty">아직 저장된 참가자가 없습니다.</div>
       <button class="db-clear-btn" id="clearDatabaseBtn" type="button">참가자 DB 전체 삭제</button>
     </section>
 
     <button class="draw-btn" id="drawBtn"><span>🎲</span> 랜덤 방배정</button>
-    <p class="hint">모든 방은 반드시 <b>2명 또는 3명</b>으로 배정됩니다.</p>
+    <p class="hint">모든 방은 반드시 <b>2명 또는 3명</b>으로 배정되며, 좌타 참석자는 좌타방에 우선 배정됩니다.</p>
     <section class="result" id="result" aria-live="polite"></section>
     <footer>TEAM PINHIGH GOLF CLUB · 좋은사람, 좋은 샷, 좋은 하루</footer>
   </main>
@@ -72,10 +73,10 @@
       <h3>사용 방법</h3>
       <ol>
         <li>방 번호를 입력하면 모바일에서는 숫자 키패드가 표시됩니다.</li>
-        <li>방은 등록 후 <b>“1번 방”</b>처럼 표시됩니다.</li>
-        <li>참석자는 이름만 입력합니다. 처음 등록한 이름은 참가자 DB에 저장되어 다음 모임에서도 목록에서 바로 선택할 수 있습니다.</li>
+        <li>방은 등록 후 <b>“1번 방”</b>처럼 표시되며, 좌타방으로 설정할 수 있습니다.</li>
+        <li>참석자는 이름을 입력하고, 좌타(왼손잡이)라면 토글을 켜서 등록합니다. 처음 등록한 이름은 참가자 DB에 저장되어 다음 모임에서도 목록에서 바로 선택할 수 있습니다.</li>
         <li>방 수와 참석자 수가 맞아야 랜덤 방배정이 가능합니다.</li>
-        <li>배정 결과는 모든 방에 2~3명이 들어가도록 생성됩니다.</li>
+        <li>배정 결과는 모든 방에 2~3명이 들어가도록 생성되며, 좌타 참석자는 좌타방에 우선 배정됩니다.</li>
         <li>방 목록과 배정 결과 모두 <b>방 번호 오름차순</b>으로 표시됩니다.</li>
       </ol>
       <p>참가자 DB는 <b>이 브라우저(기기)</b>에만 저장됩니다. 다른 기기와는 공유되지 않으니, 항상 같은 기기에서 관리하는 것을 추천합니다.</p>
