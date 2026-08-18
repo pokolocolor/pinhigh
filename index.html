@@ -17,12 +17,6 @@
 </head>
 <body>
   <main class="app-shell">
-    <header class="topbar">
-      <button class="icon-btn" id="resetBtn" aria-label="현재 모임 초기화">↻</button>
-      <h1>핀하이 정모 방뽑기</h1>
-      <button class="icon-btn" id="helpBtn" aria-label="도움말">•••</button>
-    </header>
-
     <section class="hero">
       <div class="logo-wrap"><img src="assets/team-pinhigh.jpg" alt="Team Pinhigh Golf Club"></div>
       <h2>스크린 골프 <em>방배정</em></h2>
@@ -67,6 +61,11 @@
     <section class="result" id="result" aria-live="polite"></section>
     <footer>TEAM PINHIGH GOLF CLUB · 좋은사람, 좋은 샷, 좋은 하루</footer>
   </main>
+
+  <div class="floating-actions">
+    <button class="fab" id="helpBtn" aria-label="도움말">❓</button>
+    <button class="fab" id="resetBtn" aria-label="현재 모임 초기화">↻</button>
+  </div>
 
   <dialog id="helpDialog">
     <div class="dialog-inner">
