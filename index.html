@@ -55,15 +55,15 @@
         <strong>참가자 데이터베이스</strong>
         <span class="count" id="databaseCount">0명</span>
       </div>
-      <p class="db-guide">참가자 DB에는 <b>이름만</b> 저장됩니다. 처음 등록한 이름은 GitHub 공유 DB에 <b>자동 등록</b>되며, 이미 등록된 이름은 중복 저장하지 않습니다. 다음 모임에서는 이름을 눌러 바로 등록하세요.</p>
+      <p class="db-guide">참가자 DB에는 <b>이름만</b> 저장됩니다. 관리자 설정을 한 번 완료하면, 신규 이름을 등록하는 즉시 GitHub의 <b>data/participants.json</b>에 자동 저장됩니다. 이미 등록된 이름은 GitHub에서 확인 후 다시 저장하지 않습니다. 다음 모임에서는 이름을 눌러 바로 등록하세요.</p>
       <div class="sync-panel">
         <div class="sync-status" id="syncStatus">공유 DB 연결 확인 중...</div>
         <div class="sync-actions">
           <button type="button" class="sync-btn" id="reloadDatabaseBtn">공유 DB 새로고침</button>
-          <button type="button" class="sync-btn primary" id="saveDatabaseGithubBtn">GitHub 동기화</button>
+          <button type="button" class="sync-btn primary" id="saveDatabaseGithubBtn">자동저장 설정</button>
         </div>
         <details class="github-settings">
-          <summary>GitHub 공유 DB 설정</summary>
+          <summary>GitHub 자동저장 설정 (관리자 1회)</summary>
           <div class="github-fields">
             <input id="githubOwnerInput" type="text" placeholder="GitHub 사용자/조직명" autocomplete="off">
             <input id="githubRepoInput" type="text" placeholder="저장소 이름" autocomplete="off">

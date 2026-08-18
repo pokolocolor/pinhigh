@@ -77,6 +77,16 @@ function githubConfigured() {
   return !!(githubSettings.owner && githubSettings.repo && githubSettings.branch);
 }
 
+function githubWriteConfigured() {
+  return githubConfigured() && !!githubSettings.token;
+}
+
+function parseRepoInput(value) {
+  const raw = String(value || '').trim().replace(/\/$/, '');
+  const m = raw.match(/github\.com[/:]([^/]+)\/([^/]+?)(?:\.git)?$/i);
+  return m ? { owner: m[1], repo: m[2] } : null;
+}
+
 function setSyncStatus(message, good = false) {
   const el = $('syncStatus');
   if (!el) return;
@@ -176,19 +186,20 @@ async function writeGithubDatabase(names, sha = null) {
 }
 
 async function autoRegisterParticipant(name) {
-  if (!githubConfigured() || !githubSettings.token) {
-    setSyncStatus('참가자 등록 완료 · GitHub 자동등록 설정 필요');
+  if (!githubWriteConfigured()) {
+    setSyncStatus('GitHub 자동저장을 위해 관리자 설정이 필요합니다.');
+    alertUser('참가자는 이번 모임에 등록되었습니다.\n\nGitHub 자동저장이 아직 설정되지 않았습니다.\n참가자 DB의 「GitHub 자동저장 설정」에서 저장소와 Fine-grained Token을 한 번 설정해주세요.');
     return { registered: false, reason: 'not-configured' };
   }
 
-  setSyncStatus(`GitHub에서 ${name}님 중복 확인 중...`);
+  setSyncStatus(`GitHub에 ${name}님 자동 저장 중...`);
   try {
-    // 항상 GitHub의 최신 파일을 다시 읽고 비교합니다. 이미 있으면 PUT을 하지 않습니다.
+    // 매 등록마다 GitHub 최신 상태를 읽어 중복을 확인합니다.
     let remote = await fetchGithubDatabase();
-    if (remote.names.some(existing => existing === name)) {
+    if (remote.names.includes(name)) {
       participantDB = remote.names;
       saveDatabaseLocal();
-      setSyncStatus(`GitHub DB에 이미 등록됨 · ${participantDB.length}명`, true);
+      setSyncStatus(`GitHub DB에 이미 등록된 이름입니다 · ${participantDB.length}명`, true);
       render();
       return { registered: false, duplicate: true };
     }
@@ -197,13 +208,13 @@ async function autoRegisterParticipant(name) {
     try {
       await writeGithubDatabase(merged, remote.sha);
     } catch (error) {
-      // 동시에 다른 사용자가 등록해 SHA가 바뀐 경우 최신 파일을 한 번 더 읽고 중복이면 종료합니다.
+      // 동시에 다른 사람이 수정했다면 최신 파일을 다시 읽습니다.
       if (String(error.message).includes('409')) {
         remote = await fetchGithubDatabase();
         if (remote.names.includes(name)) {
           participantDB = remote.names;
           saveDatabaseLocal();
-          setSyncStatus(`GitHub DB에 이미 등록됨 · ${participantDB.length}명`, true);
+          setSyncStatus(`다른 사용자가 먼저 등록했습니다 · ${participantDB.length}명`, true);
           render();
           return { registered: false, duplicate: true };
         }
@@ -211,40 +222,24 @@ async function autoRegisterParticipant(name) {
       } else throw error;
     }
 
-    participantDB = merged.includes(name) ? merged : normalizePeople([...remote.names, name]);
+    participantDB = normalizePeople([...remote.names, name]);
     saveDatabaseLocal();
-    setSyncStatus(`GitHub 자동등록 완료 · ${participantDB.length}명`, true);
+    setSyncStatus(`GitHub 자동저장 완료 · ${participantDB.length}명`, true);
     render();
+    toast(`${name}님이 GitHub 참가자 DB에 자동 저장되었습니다.`);
     return { registered: true };
   } catch (error) {
     console.error(error);
-    setSyncStatus('참석자는 등록됐지만 GitHub 자동등록에 실패했습니다.');
-    alertUser(`${name}님은 이번 모임에 등록됐습니다.\n\n다만 GitHub 자동등록에 실패했습니다.\n${error.message}`);
+    setSyncStatus('GitHub 자동저장 실패');
+    alertUser(`${name}님은 이번 모임에는 등록되었습니다.\n\n하지만 GitHub 자동저장에 실패했습니다.\n${error.message}\n\nGitHub 저장소/Token 권한을 확인해주세요.`);
     return { registered: false, error };
   }
 }
 
-async function saveDatabaseToGithub() {
-  if (!githubConfigured() || !githubSettings.token) {
-    alertUser('GitHub 공유 DB 설정에서 사용자/조직명, 저장소, 브랜치와 Fine-grained Token을 입력해주세요.');
-    document.querySelector('.github-settings')?.setAttribute('open', '');
-    return;
-  }
-  try {
-    setSyncStatus('GitHub DB 최신 상태 확인 중...');
-    const remote = await fetchGithubDatabase();
-    const merged = normalizePeople([...remote.names, ...participantDB]);
-    await writeGithubDatabase(merged, remote.sha);
-    participantDB = merged;
-    saveDatabaseLocal();
-    setSyncStatus(`GitHub 저장 완료 · ${participantDB.length}명`, true);
-    render();
-    toast('참가자 DB를 GitHub에 저장했습니다.');
-  } catch (error) {
-    console.error(error);
-    setSyncStatus('GitHub 저장 실패');
-    alertUser(`GitHub 저장에 실패했습니다.\n\n${error.message}`);
-  }
+function saveDatabaseToGithub() {
+  document.querySelector('.github-settings')?.setAttribute('open', '');
+  $('githubOwnerInput')?.focus();
+  alertUser('참가자 등록 시 GitHub에 자동 저장됩니다.\n\n이 버튼은 수동 저장 버튼이 아니라 자동저장 설정을 여는 용도로 변경되었습니다.');
 }
 
 function updateGithubFields() {
@@ -485,17 +480,38 @@ $('helpBtn').addEventListener('click', () => $('helpDialog').showModal());
 $('closeHelp').addEventListener('click', () => $('helpDialog').close());
 $('reloadDatabaseBtn').addEventListener('click', () => loadSharedDatabase(true));
 $('saveDatabaseGithubBtn').addEventListener('click', saveDatabaseToGithub);
-$('saveGithubSettingsBtn').addEventListener('click', () => {
+$('saveGithubSettingsBtn').addEventListener('click', async () => {
+  let owner = $('githubOwnerInput').value.trim();
+  let repo = $('githubRepoInput').value.trim();
+  const parsed = parseRepoInput(repo) || parseRepoInput(owner);
+  if (parsed) { owner = parsed.owner; repo = parsed.repo; }
   githubSettings = {
-    owner: $('githubOwnerInput').value.trim(),
-    repo: $('githubRepoInput').value.trim(),
+    owner,
+    repo,
     branch: $('githubBranchInput').value.trim() || 'main',
     token: $('githubTokenInput').value.trim()
   };
   saveGithubSettings();
-  setSyncStatus(githubConfigured() ? 'GitHub 설정이 저장되었습니다.' : 'GitHub 저장소 정보를 입력해주세요.');
-  toast('GitHub 공유 DB 설정을 저장했습니다.');
-  if (githubConfigured()) loadSharedDatabase(false);
+  updateGithubFields();
+  if (!githubConfigured()) {
+    alertUser('GitHub 사용자/조직명과 저장소 이름을 입력해주세요.');
+    return;
+  }
+  try {
+    setSyncStatus('GitHub 연결 확인 중...');
+    await loadSharedDatabase(false);
+    if (!githubWriteConfigured()) {
+      alertUser('공유 DB는 연결되었습니다.\n\n신규 참가자를 GitHub에 자동 저장하려면 Fine-grained Token을 입력하고 Contents: Read and write 권한을 부여해주세요.');
+      document.querySelector('.github-settings')?.setAttribute('open', '');
+      return;
+    }
+    const remote = await fetchGithubDatabase();
+    setSyncStatus(`GitHub 자동저장 준비 완료 · 현재 ${remote.names.length}명`, true);
+    toast('GitHub 자동저장이 활성화되었습니다.');
+  } catch (error) {
+    setSyncStatus('GitHub 연결 실패');
+    alertUser(`GitHub 연결에 실패했습니다.\n\n${error.message}`);
+  }
 });
 $('clearDatabaseBtn').addEventListener('click', async () => {
   if (!participantDB.length) { alertUser('삭제할 참가자 DB가 없습니다.'); return; }
