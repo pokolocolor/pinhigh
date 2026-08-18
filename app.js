@@ -78,9 +78,9 @@ function esc(s) {
   return String(s).replace(/[&<>'"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' }[c]));
 }
 
-// 참석자/DB 이름 표시: 좌타면 이름 옆에 (좌타)를 붙입니다.
-function displayName(p) {
-  return `${esc(p.name)}${p.left ? '<span class="left-tag">(좌타)</span>' : ''}`;
+// 좌타 배지: 방/참석자/DB/배정결과 어디서든 동일한 마크업(<small class="left-tag">좌타</small>)을 사용합니다.
+function leftTag(isLeft) {
+  return isLeft ? '<small class="left-tag">좌타</small>' : '';
 }
 
 function render() {
@@ -98,14 +98,15 @@ function render() {
   $('roomList').innerHTML = rooms.map((r, i) => `
     <div class="chip">
       <span>${esc(r.name)}번 방</span>
-      ${r.left ? '<small>좌타</small>' : ''}
+      ${leftTag(r.left)}
       <button type="button" onclick="removeRoom(${i})" aria-label="${esc(r.name)}번 방 삭제">×</button>
     </div>
   `).join('');
 
   $('personList').innerHTML = people.map((p, i) => `
     <div class="chip">
-      <span>${displayName(p)}</span>
+      <span>${esc(p.name)}</span>
+      ${leftTag(p.left)}
       <button type="button" onclick="removePerson(${i})" aria-label="${esc(p.name)} 삭제">×</button>
     </div>
   `).join('');
@@ -116,7 +117,8 @@ function render() {
     return `
       <div class="db-row">
         <button type="button" class="db-person-btn ${selected ? 'selected' : ''}" onclick="addPersonFromDB(${i})" ${selected ? 'disabled' : ''}>
-          <span class="db-name">${displayName(p)}</span>
+          <span class="db-name">${esc(p.name)}</span>
+          ${leftTag(p.left)}
           <span class="db-action">${selected ? '등록됨' : '+ 등록'}</span>
         </button>
         <button type="button" class="db-delete" onclick="removeFromDB(${i})" aria-label="${esc(p.name)} DB 삭제">×</button>
@@ -164,7 +166,7 @@ function addPerson(name) {
   saveCurrent();
   saveDatabaseLocal();
   render();
-  toast(`${name}${left ? '(좌타)' : ''}님을 참석자로 등록했습니다.`);
+  toast(`${name}${left ? ' (좌타)' : ''}님을 참석자로 등록했습니다.`);
   return true;
 }
 
@@ -187,7 +189,7 @@ function addPersonFromDB(index) {
   people.push({ name: entry.name, left: entry.left });
   saveCurrent();
   render();
-  toast(`${entry.name}${entry.left ? '(좌타)' : ''}님을 참석자로 등록했습니다.`);
+  toast(`${entry.name}${entry.left ? ' (좌타)' : ''}님을 참석자로 등록했습니다.`);
 }
 
 function removeRoom(i) {
@@ -299,7 +301,9 @@ function draw() {
         ${groups.map(g => `
           <div class="room-result">
             <div class="room-result-title"><b>🏌️ ${esc(g.room.name)}번 방</b><span>${g.people.length}명${g.room.left ? ' · 좌타방' : ''}</span></div>
-            <div class="result-people">${g.people.map(p => `<span class="person${p.left ? ' left' : ''}">${displayName(p)}</span>`).join('')}</div>
+            <div class="result-people">${g.people.map(p => `
+              <span class="person${p.left ? ' left' : ''}">${esc(p.name)}${leftTag(p.left)}</span>
+            `).join('')}</div>
           </div>
         `).join('')}
       </div>
