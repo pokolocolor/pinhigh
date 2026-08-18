@@ -2,8 +2,8 @@ const $ = id => document.getElementById(id);
 
 const STORAGE = {
   rooms: 'pinhigh_rooms_v3',
-  people: 'pinhigh_people_v3',
-  database: 'pinhigh_participant_database_v3'
+  people: 'pinhigh_people_v4',
+  database: 'pinhigh_participant_database_v4'
 };
 
 let participantDB = normalizePeople(readJSON(STORAGE.database));
@@ -18,12 +18,17 @@ function readJSON(key, fallback = []) {
 }
 
 function normalizePeople(list) {
-  const names = new Map();
+  const map = new Map();
   (Array.isArray(list) ? list : []).forEach(p => {
-    const name = typeof p === 'string' ? p.trim() : String(p?.name || '').trim();
-    if (name) names.set(name, name);
+    if (typeof p === 'string') {
+      const name = p.trim();
+      if (name) map.set(name, { name, left: false });
+    } else if (p && typeof p === 'object') {
+      const name = String(p.name || '').trim();
+      if (name) map.set(name, { name, left: !!p.left });
+    }
   });
-  return [...names.values()].sort((a, b) => a.localeCompare(b, 'ko'));
+  return [...map.values()].sort((a, b) => a.name.localeCompare(b.name, 'ko'));
 }
 
 function roomNumber(room) {
@@ -93,20 +98,25 @@ function render() {
     </div>
   `).join('');
 
-  $('personList').innerHTML = people.map((name, i) => `
-    <div class="chip"><span>${esc(name)}</span><button type="button" onclick="removePerson(${i})" aria-label="${esc(name)} 삭제">×</button></div>
+  $('personList').innerHTML = people.map((p, i) => `
+    <div class="chip">
+      <span>${esc(p.name)}</span>
+      ${p.left ? '<small>좌타</small>' : ''}
+      <button type="button" onclick="removePerson(${i})" aria-label="${esc(p.name)} 삭제">×</button>
+    </div>
   `).join('');
 
-  const currentNames = new Set(people);
-  $('databaseList').innerHTML = participantDB.map((name, i) => {
-    const selected = currentNames.has(name);
+  const currentNames = new Set(people.map(p => p.name));
+  $('databaseList').innerHTML = participantDB.map((p, i) => {
+    const selected = currentNames.has(p.name);
     return `
       <div class="db-row">
         <button type="button" class="db-person-btn ${selected ? 'selected' : ''}" onclick="addPersonFromDB(${i})" ${selected ? 'disabled' : ''}>
-          <span class="db-name">${esc(name)}</span>
+          <span class="db-name">${esc(p.name)}</span>
+          ${p.left ? '<span class="db-badge">좌타</span>' : ''}
           <span class="db-action">${selected ? '등록됨' : '+ 등록'}</span>
         </button>
-        <button type="button" class="db-delete" onclick="removeFromDB(${i})" aria-label="${esc(name)} DB 삭제">×</button>
+        <button type="button" class="db-delete" onclick="removeFromDB(${i})" aria-label="${esc(p.name)} DB 삭제">×</button>
       </div>
     `;
   }).join('');
@@ -135,22 +145,23 @@ function addRoom() {
 
 function addPerson(name) {
   name = String(name || '').trim();
+  const left = $('leftPersonToggle').checked;
   if (!name) {
     alertUser('참석자 이름을 입력해주세요.');
     $('personInput').focus();
     return false;
   }
-  if (people.includes(name)) {
+  if (people.some(p => p.name === name)) {
     alertUser(`${name}님은 이미 이번 모임에 등록되어 있습니다.`);
     return false;
   }
 
-  people.push(name);
-  participantDB = normalizePeople([...participantDB, name]);
+  people.push({ name, left });
+  participantDB = normalizePeople([...participantDB, { name, left }]);
   saveCurrent();
   saveDatabaseLocal();
   render();
-  toast(`${name}님을 참석자로 등록했습니다.`);
+  toast(`${name}님을 참석자로 등록했습니다.${left ? ' (좌타)' : ''}`);
   return true;
 }
 
@@ -158,21 +169,22 @@ function addPersonFromInput() {
   const name = $('personInput').value.trim();
   if (addPerson(name)) {
     $('personInput').value = '';
+    $('leftPersonToggle').checked = false;
     $('personInput').focus();
   }
 }
 
 function addPersonFromDB(index) {
-  const name = participantDB[index];
-  if (!name) return;
-  if (people.includes(name)) {
-    alertUser(`${name}님은 이미 이번 모임에 등록되어 있습니다.`);
+  const entry = participantDB[index];
+  if (!entry) return;
+  if (people.some(p => p.name === entry.name)) {
+    alertUser(`${entry.name}님은 이미 이번 모임에 등록되어 있습니다.`);
     return;
   }
-  people.push(name);
+  people.push({ name: entry.name, left: entry.left });
   saveCurrent();
   render();
-  toast(`${name}님을 참석자로 등록했습니다.`);
+  toast(`${entry.name}님을 참석자로 등록했습니다.${entry.left ? ' (좌타)' : ''}`);
 }
 
 function removeRoom(i) {
@@ -185,18 +197,18 @@ function removeRoom(i) {
 }
 
 function removePerson(i) {
-  const name = people[i];
-  if (!name) return;
-  if (!window.confirm(`${name}님을 이번 모임에서 삭제할까요?\n참가자 DB에서는 삭제되지 않습니다.`)) return;
+  const p = people[i];
+  if (!p) return;
+  if (!window.confirm(`${p.name}님을 이번 모임에서 삭제할까요?\n참가자 DB에서는 삭제되지 않습니다.`)) return;
   people.splice(i, 1);
   saveCurrent();
   render();
 }
 
 function removeFromDB(i) {
-  const name = participantDB[i];
-  if (!name) return;
-  if (!window.confirm(`${name}님을 참가자 DB에서도 삭제할까요?`)) return;
+  const p = participantDB[i];
+  if (!p) return;
+  if (!window.confirm(`${p.name}님을 참가자 DB에서도 삭제할까요?`)) return;
   participantDB.splice(i, 1);
   saveDatabaseLocal();
   render();
@@ -223,12 +235,28 @@ function buildAssignments() {
   const shuffledRooms = shuffle(normalizeRooms(rooms));
   const sizes = getGroupSizes(shuffledRooms.length, people.length);
   const groups = shuffledRooms.map((room, i) => ({ room, capacity: sizes[i], people: [] }));
-  const shuffledPeople = shuffle(people);
+
+  const leftPeople = shuffle(people.filter(p => p.left));
+  const rightPeople = shuffle(people.filter(p => !p.left));
+
+  // 좌타방에는 좌타 참석자를 먼저 배정합니다.
+  const leftRoomGroups = shuffle(groups.filter(g => g.room.left));
+  let li = 0;
+  leftRoomGroups.forEach(group => {
+    while (group.people.length < group.capacity && li < leftPeople.length) {
+      group.people.push(leftPeople[li++]);
+    }
+  });
+
+  // 좌타방에 다 배정되지 못한 좌타 참석자는 나머지 인원과 함께 무작위로 채웁니다.
+  const remaining = shuffle([...rightPeople, ...leftPeople.slice(li)]);
   let cursor = 0;
   groups.forEach(group => {
-    group.people = shuffledPeople.slice(cursor, cursor + group.capacity);
-    cursor += group.capacity;
+    while (group.people.length < group.capacity) {
+      group.people.push(remaining[cursor++]);
+    }
   });
+
   return groups;
 }
 
@@ -267,7 +295,7 @@ function draw() {
         ${groups.map(g => `
           <div class="room-result">
             <div class="room-result-title"><b>🏌️ ${esc(g.room.name)}번 방</b><span>${g.people.length}명${g.room.left ? ' · 좌타방' : ''}</span></div>
-            <div class="result-people">${g.people.map(name => `<span class="person">${esc(name)}</span>`).join('')}</div>
+            <div class="result-people">${g.people.map(p => `<span class="person${p.left ? ' left' : ''}">${esc(p.name)}${p.left ? ' · 좌타' : ''}</span>`).join('')}</div>
           </div>
         `).join('')}
       </div>
