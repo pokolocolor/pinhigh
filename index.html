@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#16082b">
+  <meta name="description" content="팀 핀하이 골프클럽 정모 방배정 랜덤 추첨기">
+  <title>핀하이 정모 방뽑기</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <button class="icon-btn" id="resetBtn" aria-label="초기화">↻</button>
+      <h1>핀하이 정모 방뽑기</h1>
+      <button class="icon-btn" id="helpBtn" aria-label="도움말">•••</button>
+    </header>
+
+    <section class="hero">
+      <div class="logo-wrap"><img src="assets/team-pinhigh.jpg" alt="Team Pinhigh Golf Club"></div>
+      <h2>스크린 골프 <em>방배정</em></h2>
+      <p>좋은사람, 좋은 샷, 좋은 하루</p>
+    </section>
+
+    <section class="card" id="roomsCard">
+      <div class="card-title"><span class="title-icon">🏌️</span><strong>방 등록</strong><span class="count" id="roomCount">0개</span></div>
+      <div class="input-row">
+        <input id="roomInput" type="text" placeholder="방 번호 (예: 1, 2A)" maxlength="20" autocomplete="off">
+        <button class="add-btn" id="addRoomBtn">추가</button>
+      </div>
+      <label class="toggle-row"><input id="leftRoomToggle" type="checkbox"><span class="switch"></span>좌타방으로 설정</label>
+      <div class="empty" id="roomEmpty">등록된 방이 없습니다</div>
+      <div class="chips" id="roomList"></div>
+    </section>
+
+    <section class="card">
+      <div class="card-title"><span class="title-icon">👥</span><strong>참석자 등록</strong><span class="count" id="personCount">0명</span></div>
+      <div class="input-row">
+        <input id="personInput" type="text" placeholder="이름 입력" maxlength="20" autocomplete="off">
+        <button class="add-btn" id="addPersonBtn">추가</button>
+      </div>
+      <label class="toggle-row"><input id="leftPersonToggle" type="checkbox"><span class="switch"></span>좌타자로 등록</label>
+      <div class="empty" id="personEmpty">등록된 참석자가 없습니다</div>
+      <div class="chips" id="personList"></div>
+    </section>
+
+    <button class="draw-btn" id="drawBtn"><span>🎲</span> 랜덤 방배정</button>
+    <p class="hint">참석자와 방을 먼저 등록한 뒤 랜덤 방배정을 눌러주세요.</p>
+    <section class="result" id="result" aria-live="polite"></section>
+    <footer>TEAM PINHIGH GOLF CLUB · 좋은사람, 좋은 샷, 좋은 하루</footer>
+  </main>
+
+  <dialog id="helpDialog">
+    <div class="dialog-inner"><button class="close" id="closeHelp">×</button><h3>사용 방법</h3><ol><li>방 번호를 등록합니다.</li><li>참석자 이름을 등록합니다.</li><li>좌타방/좌타자 여부를 선택할 수 있습니다.</li><li><b>랜덤 방배정</b>을 누르면 참석자가 무작위로 배정됩니다.</li></ol><p>데이터는 이 기기의 브라우저에 자동 저장됩니다.</p></div>
+  </dialog>
+  <div class="toast" id="toast"></div>
+  <script src="app.js"></script>
+</body>
+</html>
