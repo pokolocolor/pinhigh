@@ -3,8 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#16082b">
   <meta name="description" content="팀 핀하이 골프클럽 정모 방배정 랜덤 추첨기">
+  <meta name="theme-color" content="#18072d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="핀하이 방배정">
+  <link rel="icon" type="image/jpeg" href="pinhigh.jpg">
+  <link rel="apple-touch-icon" href="pinhigh.jpg">
+  <link rel="manifest" href="manifest.webmanifest">
   <title>핀하이 정모 방뽑기</title>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -39,7 +45,6 @@
         <input id="personInput" type="text" placeholder="이름 입력" maxlength="20" autocomplete="off" enterkeyhint="done">
         <button class="add-btn" id="addPersonBtn">추가</button>
       </div>
-      <label class="toggle-row"><input id="leftPersonToggle" type="checkbox"><span class="switch"></span>좌타자로 등록</label>
       <div class="empty" id="personEmpty">등록된 참석자가 없습니다</div>
       <div class="chips" id="personList"></div>
     </section>
@@ -50,12 +55,12 @@
         <strong>참가자 데이터베이스</strong>
         <span class="count" id="databaseCount">0명</span>
       </div>
-      <p class="db-guide">참가자 DB는 GitHub의 <b>공유 데이터</b>를 기준으로 표시됩니다. 다음 모임에서는 <b>이름을 눌러 바로 등록</b>하세요.</p>
+      <p class="db-guide">참가자 DB에는 <b>이름만</b> 저장됩니다. 처음 등록한 이름은 GitHub 공유 DB에 <b>자동 등록</b>되며, 이미 등록된 이름은 중복 저장하지 않습니다. 다음 모임에서는 이름을 눌러 바로 등록하세요.</p>
       <div class="sync-panel">
         <div class="sync-status" id="syncStatus">공유 DB 연결 확인 중...</div>
         <div class="sync-actions">
           <button type="button" class="sync-btn" id="reloadDatabaseBtn">공유 DB 새로고침</button>
-          <button type="button" class="sync-btn primary" id="saveDatabaseGithubBtn">GitHub에 저장</button>
+          <button type="button" class="sync-btn primary" id="saveDatabaseGithubBtn">GitHub 동기화</button>
         </div>
         <details class="github-settings">
           <summary>GitHub 공유 DB 설정</summary>
@@ -66,7 +71,7 @@
             <input id="githubTokenInput" type="password" placeholder="GitHub Fine-grained Token" autocomplete="off">
             <button type="button" class="sync-btn primary" id="saveGithubSettingsBtn">설정 저장</button>
           </div>
-          <p>공개 GitHub 저장소라면 다른 사용자는 별도 설정 없이 공유 DB를 읽을 수 있습니다. DB를 GitHub에 쓰려면 <b>Contents: Read and write</b> 권한의 Fine-grained Token이 필요합니다. 토큰은 저장소에 업로드되지 않고 이 브라우저에만 저장됩니다.</p>
+          <p>모든 사용자는 GitHub의 공개 DB를 읽습니다. <b>신규 참가자 자동등록은 GitHub 쓰기 권한이 있는 관리자 브라우저</b>에서 동작합니다. Fine-grained Token은 <b>Contents: Read and write</b> 권한이 필요하며 저장소에는 업로드되지 않습니다.</p>
         </details>
       </div>
       <div class="database-list" id="databaseList"></div>
@@ -87,12 +92,12 @@
       <ol>
         <li>방 번호를 입력하면 모바일에서는 숫자 키패드가 표시됩니다.</li>
         <li>방은 등록 후 <b>“1번 방”</b>처럼 표시됩니다.</li>
-        <li>참석자를 직접 입력하거나 참가자 DB의 이름을 눌러 등록합니다.</li>
+        <li>참석자는 이름만 입력합니다. 처음 등록한 이름은 GitHub 공유 DB에 자동 등록됩니다.</li>
         <li>방 수와 참석자 수가 맞아야 랜덤 방배정이 가능합니다.</li>
         <li>배정 결과는 모든 방에 2~3명이 들어가도록 생성됩니다.</li>
-        <li>배정 결과는 <b>방 번호 오름차순</b>으로 표시됩니다.</li>
+        <li>방 목록과 배정 결과 모두 <b>방 번호 오름차순</b>으로 표시됩니다.</li>
       </ol>
-      <p>참가자 DB는 GitHub의 <b>data/participants.json</b>을 공유 원본으로 사용합니다. GitHub 저장 기능을 사용하면 다른 사용자도 같은 DB를 볼 수 있습니다.</p>
+      <p>참가자 DB는 GitHub의 <b>data/participants.json</b>을 공유 원본으로 사용합니다. 참가자는 이름만 저장되며, 신규 이름은 관리자 브라우저에서 GitHub에 자동 등록됩니다.</p>
     </div>
   </dialog>
   <div class="toast" id="toast" role="status"></div>
