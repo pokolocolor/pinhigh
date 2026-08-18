@@ -11,7 +11,7 @@
 <body>
   <main class="app-shell">
     <header class="topbar">
-      <button class="icon-btn" id="resetBtn" aria-label="초기화">↻</button>
+      <button class="icon-btn" id="resetBtn" aria-label="현재 모임 초기화">↻</button>
       <h1>핀하이 정모 방뽑기</h1>
       <button class="icon-btn" id="helpBtn" aria-label="도움말">•••</button>
     </header>
@@ -25,7 +25,7 @@
     <section class="card" id="roomsCard">
       <div class="card-title"><span class="title-icon">🏌️</span><strong>방 등록</strong><span class="count" id="roomCount">0개</span></div>
       <div class="input-row">
-        <input id="roomInput" type="number" inputmode="numeric" pattern="[0-9]*" placeholder="방 번호 입력" min="1" step="1" autocomplete="off">
+        <input id="roomInput" type="tel" inputmode="numeric" pattern="[0-9]*" placeholder="방 번호 (예: 1, 2)" maxlength="4" autocomplete="off" aria-label="방 번호">
         <button class="add-btn" id="addRoomBtn">추가</button>
       </div>
       <label class="toggle-row"><input id="leftRoomToggle" type="checkbox"><span class="switch"></span>좌타방으로 설정</label>
@@ -33,10 +33,10 @@
       <div class="chips" id="roomList"></div>
     </section>
 
-    <section class="card">
+    <section class="card" id="peopleCard">
       <div class="card-title"><span class="title-icon">👥</span><strong>참석자 등록</strong><span class="count" id="personCount">0명</span></div>
       <div class="input-row">
-        <input id="personInput" type="text" placeholder="이름 입력" maxlength="20" autocomplete="off">
+        <input id="personInput" type="text" placeholder="이름 입력" maxlength="20" autocomplete="off" enterkeyhint="done">
         <button class="add-btn" id="addPersonBtn">추가</button>
       </div>
       <label class="toggle-row"><input id="leftPersonToggle" type="checkbox"><span class="switch"></span>좌타자로 등록</label>
@@ -44,23 +44,39 @@
       <div class="chips" id="personList"></div>
     </section>
 
-    <section class="card db-card">
-      <div class="card-title"><span class="title-icon">🗂️</span><strong>참가자 DB</strong><span class="count" id="dbCount">0명</span></div>
-      <p class="db-guide">한 번 등록한 참가자는 자동 저장됩니다. 이름을 누르면 이번 모임에 바로 추가됩니다.</p>
-      <div class="db-list" id="dbList"></div>
-      <div class="empty" id="dbEmpty">저장된 참가자가 없습니다</div>
+    <section class="card database-card" id="databaseCard">
+      <div class="card-title">
+        <span class="title-icon">🗂️</span>
+        <strong>참가자 데이터베이스</strong>
+        <span class="count" id="databaseCount">0명</span>
+      </div>
+      <p class="db-guide">한 번 등록한 참가자는 이 기기에 저장됩니다. 다음 모임에서는 <b>이름을 눌러 바로 등록</b>하세요.</p>
+      <div class="database-list" id="databaseList"></div>
+      <div class="db-empty" id="databaseEmpty">아직 저장된 참가자가 없습니다.</div>
+      <button class="db-clear-btn" id="clearDatabaseBtn" type="button">참가자 DB 전체 삭제</button>
     </section>
 
     <button class="draw-btn" id="drawBtn"><span>🎲</span> 랜덤 방배정</button>
-    <p class="hint">참석자와 방을 먼저 등록한 뒤 랜덤 방배정을 눌러주세요.</p>
+    <p class="hint">모든 방은 반드시 <b>2명 또는 3명</b>으로 배정됩니다.</p>
     <section class="result" id="result" aria-live="polite"></section>
     <footer>TEAM PINHIGH GOLF CLUB · 좋은사람, 좋은 샷, 좋은 하루</footer>
   </main>
 
   <dialog id="helpDialog">
-    <div class="dialog-inner"><button class="close" id="closeHelp">×</button><h3>사용 방법</h3><ol><li>방 번호를 등록합니다.</li><li>참석자 이름을 등록합니다.</li><li>좌타방/좌타자 여부를 선택할 수 있습니다.</li><li><b>랜덤 방배정</b>을 누르면 모든 방에 2~3명씩 배정됩니다.</li></ol><p>방·이번 모임 참가자·참가자 DB는 이 기기의 브라우저에 자동 저장됩니다. 참가자 DB는 모임 초기화 후에도 유지됩니다.</p></div>
+    <div class="dialog-inner">
+      <button class="close" id="closeHelp" aria-label="닫기">×</button>
+      <h3>사용 방법</h3>
+      <ol>
+        <li>방 번호를 입력하면 모바일에서는 숫자 키패드가 표시됩니다.</li>
+        <li>방은 등록 후 <b>“1번 방”</b>처럼 표시됩니다.</li>
+        <li>참석자를 직접 입력하거나 참가자 DB의 이름을 눌러 등록합니다.</li>
+        <li>방 수와 참석자 수가 맞아야 랜덤 방배정이 가능합니다.</li>
+        <li>배정 결과는 모든 방에 2~3명이 들어가도록 생성됩니다.</li>
+      </ol>
+      <p>참가자 DB는 현재 모임 초기화와 별도로 이 기기의 브라우저에 저장됩니다.</p>
+    </div>
   </dialog>
-  <div class="toast" id="toast"></div>
+  <div class="toast" id="toast" role="status"></div>
   <script src="app.js"></script>
 </body>
 </html>
