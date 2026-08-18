@@ -4,7 +4,8 @@ const STORAGE = {
   rooms: 'pinhigh_rooms_v3',
   people: 'pinhigh_people_v3',
   database: 'pinhigh_participant_database_v3',
-  github: 'pinhigh_github_db_settings_v2'
+  github: 'pinhigh_github_db_settings_v2',
+  pendingGithub: 'pinhigh_pending_github_names_v1'
 };
 
 const SHARED_DB_PATH = 'data/participants.json';
@@ -185,21 +186,40 @@ async function writeGithubDatabase(names, sha = null) {
   }
 }
 
+function readPendingGithubNames() {
+  return normalizePeople(readJSON(STORAGE.pendingGithub));
+}
+
+function savePendingGithubNames(names) {
+  localStorage.setItem(STORAGE.pendingGithub, JSON.stringify(normalizePeople(names)));
+}
+
+function queueGithubParticipant(name) {
+  const pending = readPendingGithubNames();
+  if (!pending.includes(name)) pending.push(name);
+  savePendingGithubNames(pending);
+}
+
+function removePendingGithubParticipant(name) {
+  savePendingGithubNames(readPendingGithubNames().filter(n => n !== name));
+}
+
 async function autoRegisterParticipant(name) {
   if (!githubWriteConfigured()) {
-    setSyncStatus('GitHub 자동저장을 위해 관리자 설정이 필요합니다.');
-    alertUser('참가자는 이번 모임에 등록되었습니다.\n\nGitHub 자동저장이 아직 설정되지 않았습니다.\n참가자 DB의 「GitHub 자동저장 설정」에서 저장소와 Fine-grained Token을 한 번 설정해주세요.');
+    setSyncStatus('참가자는 등록됨 · GitHub 자동저장 설정 대기 중');
     return { registered: false, reason: 'not-configured' };
   }
 
-  setSyncStatus(`GitHub에 ${name}님 자동 저장 중...`);
+  setSyncStatus(`${name}님 GitHub 자동 저장 중...`);
   try {
-    // 매 등록마다 GitHub 최신 상태를 읽어 중복을 확인합니다.
     let remote = await fetchGithubDatabase();
+
+    // GitHub에 이미 있으면 아무것도 쓰지 않습니다.
     if (remote.names.includes(name)) {
       participantDB = remote.names;
       saveDatabaseLocal();
-      setSyncStatus(`GitHub DB에 이미 등록된 이름입니다 · ${participantDB.length}명`, true);
+      removePendingGithubParticipant(name);
+      setSyncStatus(`GitHub DB 동기화 완료 · ${participantDB.length}명`, true);
       render();
       return { registered: false, duplicate: true };
     }
@@ -208,32 +228,51 @@ async function autoRegisterParticipant(name) {
     try {
       await writeGithubDatabase(merged, remote.sha);
     } catch (error) {
-      // 동시에 다른 사람이 수정했다면 최신 파일을 다시 읽습니다.
+      // 다른 사용자가 같은 시점에 저장한 경우 최신 파일을 다시 읽어 중복 여부를 확인합니다.
       if (String(error.message).includes('409')) {
         remote = await fetchGithubDatabase();
         if (remote.names.includes(name)) {
           participantDB = remote.names;
           saveDatabaseLocal();
-          setSyncStatus(`다른 사용자가 먼저 등록했습니다 · ${participantDB.length}명`, true);
+          removePendingGithubParticipant(name);
+          setSyncStatus(`GitHub DB 동기화 완료 · ${participantDB.length}명`, true);
           render();
           return { registered: false, duplicate: true };
         }
         await writeGithubDatabase(normalizePeople([...remote.names, name]), remote.sha);
-      } else throw error;
+      } else {
+        throw error;
+      }
     }
 
     participantDB = normalizePeople([...remote.names, name]);
     saveDatabaseLocal();
+    removePendingGithubParticipant(name);
     setSyncStatus(`GitHub 자동저장 완료 · ${participantDB.length}명`, true);
     render();
     toast(`${name}님이 GitHub 참가자 DB에 자동 저장되었습니다.`);
     return { registered: true };
   } catch (error) {
-    console.error(error);
-    setSyncStatus('GitHub 자동저장 실패');
-    alertUser(`${name}님은 이번 모임에는 등록되었습니다.\n\n하지만 GitHub 자동저장에 실패했습니다.\n${error.message}\n\nGitHub 저장소/Token 권한을 확인해주세요.`);
+    console.error('GitHub participant save failed:', error);
+    queueGithubParticipant(name);
+    setSyncStatus(`참가자 등록 완료 · GitHub 자동저장 재시도 대기 (${name})`);
     return { registered: false, error };
   }
+}
+
+let githubSyncPromise = null;
+async function syncPendingParticipants() {
+  if (githubSyncPromise || !githubWriteConfigured()) return;
+  const pending = readPendingGithubNames();
+  if (!pending.length) return;
+
+  githubSyncPromise = (async () => {
+    for (const name of pending) {
+      await autoRegisterParticipant(name);
+    }
+  })().finally(() => { githubSyncPromise = null; });
+
+  await githubSyncPromise;
 }
 
 function saveDatabaseToGithub() {
@@ -324,7 +363,7 @@ function addRoom() {
   $('roomInput').focus();
 }
 
-async function addPerson(name) {
+function addPerson(name) {
   name = String(name || '').trim();
   if (!name) {
     alertUser('참석자 이름을 입력해주세요.');
@@ -336,18 +375,24 @@ async function addPerson(name) {
     return false;
   }
 
+  // 참가자 등록은 GitHub 응답을 기다리지 않고 즉시 완료합니다.
+  // 네트워크 오류가 있어도 현재 모임과 로컬 공유 DB 화면에서 이름이 사라지지 않습니다.
   people.push(name);
+  participantDB = normalizePeople([...participantDB, name]);
   saveCurrent();
+  saveDatabaseLocal();
+  queueGithubParticipant(name);
   render();
+  toast(`${name}님을 참석자로 등록했습니다.`);
 
-  // 신규 참가자 입력 즉시 GitHub의 최신 DB를 확인하고, 없을 때만 자동 등록합니다.
-  await autoRegisterParticipant(name);
+  // GitHub 저장은 백그라운드에서 자동 처리합니다.
+  void syncPendingParticipants();
   return true;
 }
 
-async function addPersonFromInput() {
+function addPersonFromInput() {
   const name = $('personInput').value.trim();
-  if (await addPerson(name)) {
+  if (addPerson(name)) {
     $('personInput').value = '';
     $('personInput').focus();
   }
@@ -499,7 +544,7 @@ $('saveGithubSettingsBtn').addEventListener('click', async () => {
   }
   try {
     setSyncStatus('GitHub 연결 확인 중...');
-    await loadSharedDatabase(false);
+    await loadSharedDatabase(false).then(() => syncPendingParticipants());
     if (!githubWriteConfigured()) {
       alertUser('공유 DB는 연결되었습니다.\n\n신규 참가자를 GitHub에 자동 저장하려면 Fine-grained Token을 입력하고 Contents: Read and write 권한을 부여해주세요.');
       document.querySelector('.github-settings')?.setAttribute('open', '');
@@ -508,6 +553,7 @@ $('saveGithubSettingsBtn').addEventListener('click', async () => {
     const remote = await fetchGithubDatabase();
     setSyncStatus(`GitHub 자동저장 준비 완료 · 현재 ${remote.names.length}명`, true);
     toast('GitHub 자동저장이 활성화되었습니다.');
+    void syncPendingParticipants();
   } catch (error) {
     setSyncStatus('GitHub 연결 실패');
     alertUser(`GitHub 연결에 실패했습니다.\n\n${error.message}`);
@@ -534,4 +580,4 @@ $('resetBtn').addEventListener('click', () => {
 updateGithubFields();
 participantDB = normalizePeople(readJSON(STORAGE.database));
 render();
-loadSharedDatabase(false);
+loadSharedDatabase(false).then(() => syncPendingParticipants());
