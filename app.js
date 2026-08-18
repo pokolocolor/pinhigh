@@ -3,14 +3,10 @@ const $ = id => document.getElementById(id);
 const STORAGE = {
   rooms: 'pinhigh_rooms_v3',
   people: 'pinhigh_people_v3',
-  database: 'pinhigh_participant_database_v3',
-  github: 'pinhigh_github_db_settings_v2',
-  pendingGithub: 'pinhigh_pending_github_names_v1'
+  database: 'pinhigh_participant_database_v3'
 };
 
-const SHARED_DB_PATH = 'data/participants.json';
-let githubSettings = readObject(STORAGE.github, { owner: '', repo: '', branch: 'main', token: '' });
-let participantDB = [];
+let participantDB = normalizePeople(readJSON(STORAGE.database));
 let rooms = normalizeRooms(readJSON(STORAGE.rooms));
 let people = normalizePeople(readJSON(STORAGE.people));
 
@@ -18,13 +14,6 @@ function readJSON(key, fallback = []) {
   try {
     const value = JSON.parse(localStorage.getItem(key) || 'null');
     return Array.isArray(value) ? value : fallback;
-  } catch { return fallback; }
-}
-
-function readObject(key, fallback = {}) {
-  try {
-    const value = JSON.parse(localStorage.getItem(key) || 'null');
-    return value && typeof value === 'object' && !Array.isArray(value) ? value : fallback;
   } catch { return fallback; }
 }
 
@@ -70,224 +59,6 @@ function saveDatabaseLocal() {
   localStorage.setItem(STORAGE.database, JSON.stringify(participantDB));
 }
 
-function saveGithubSettings() {
-  localStorage.setItem(STORAGE.github, JSON.stringify(githubSettings));
-}
-
-function githubConfigured() {
-  return !!(githubSettings.owner && githubSettings.repo && githubSettings.branch);
-}
-
-function githubWriteConfigured() {
-  return githubConfigured() && !!githubSettings.token;
-}
-
-function parseRepoInput(value) {
-  const raw = String(value || '').trim().replace(/\/$/, '');
-  const m = raw.match(/github\.com[/:]([^/]+)\/([^/]+?)(?:\.git)?$/i);
-  return m ? { owner: m[1], repo: m[2] } : null;
-}
-
-function setSyncStatus(message, good = false) {
-  const el = $('syncStatus');
-  if (!el) return;
-  el.textContent = message;
-  el.style.color = good ? '#d9b9ff' : '';
-}
-
-function githubApiUrl() {
-  return `https://api.github.com/repos/${encodeURIComponent(githubSettings.owner)}/${encodeURIComponent(githubSettings.repo)}/contents/${SHARED_DB_PATH}`;
-}
-
-function githubHeaders() {
-  const headers = {
-    'Accept': 'application/vnd.github+json',
-    'X-GitHub-Api-Version': '2022-11-28'
-  };
-  if (githubSettings.token) headers.Authorization = `Bearer ${githubSettings.token}`;
-  return headers;
-}
-
-function utf8ToBase64(text) {
-  const bytes = new TextEncoder().encode(text);
-  let binary = '';
-  bytes.forEach(b => binary += String.fromCharCode(b));
-  return btoa(binary);
-}
-
-function base64ToUtf8(base64) {
-  const binary = atob(base64.replace(/\n/g, ''));
-  const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
-  return new TextDecoder().decode(bytes);
-}
-
-async function fetchGithubDatabase() {
-  if (!githubConfigured()) throw new Error('GitHub 저장소 설정이 없습니다.');
-  const response = await fetch(`${githubApiUrl()}?ref=${encodeURIComponent(githubSettings.branch)}&t=${Date.now()}`, {
-    headers: githubHeaders(), cache: 'no-store'
-  });
-  if (response.status === 404) return { names: [], sha: null };
-  if (!response.ok) throw new Error(`GitHub DB 조회 실패 (${response.status})`);
-  const file = await response.json();
-  const names = normalizePeople(JSON.parse(base64ToUtf8(file.content || 'W10=')));
-  return { names, sha: file.sha || null };
-}
-
-async function loadSharedDatabase(showAlert = false) {
-  // 공개 GitHub Pages에서는 raw 파일을 읽어 모든 사용자에게 같은 DB를 보여줍니다.
-  setSyncStatus('GitHub 공유 DB 불러오는 중...');
-  try {
-    let names = [];
-    if (githubConfigured()) {
-      const result = await fetchGithubDatabase();
-      names = result.names;
-    } else {
-      const response = await fetch(`${SHARED_DB_PATH}?v=${Date.now()}`, { cache: 'no-store' });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      names = normalizePeople(await response.json());
-    }
-    participantDB = names;
-    saveDatabaseLocal();
-    setSyncStatus(`공유 DB 연결됨 · ${participantDB.length}명`, true);
-    render();
-    return true;
-  } catch (error) {
-    console.error(error);
-    const cached = normalizePeople(readJSON(STORAGE.database));
-    participantDB = cached;
-    saveDatabaseLocal();
-    setSyncStatus('공유 DB를 불러오지 못했습니다 · 저장된 DB를 표시합니다.');
-    if (showAlert) alertUser(`GitHub 참가자 DB를 불러오지 못했습니다.\n\n${error.message}`);
-    render();
-    return false;
-  }
-}
-
-async function writeGithubDatabase(names, sha = null) {
-  if (!githubConfigured()) throw new Error('GitHub 사용자/조직명, 저장소, 브랜치를 먼저 설정해주세요.');
-  if (!githubSettings.token) throw new Error('GitHub 자동 등록을 위해 Fine-grained Token이 필요합니다.');
-
-  const content = JSON.stringify(normalizePeople(names), null, 2) + '\n';
-  const payload = {
-    message: 'Update participant database',
-    content: utf8ToBase64(content),
-    branch: githubSettings.branch
-  };
-  if (sha) payload.sha = sha;
-
-  const response = await fetch(githubApiUrl(), {
-    method: 'PUT',
-    headers: { ...githubHeaders(), 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
-  if (!response.ok) {
-    const detail = await response.text();
-    throw new Error(`GitHub 저장 실패 (${response.status}) ${detail.slice(0, 180)}`);
-  }
-}
-
-function readPendingGithubNames() {
-  return normalizePeople(readJSON(STORAGE.pendingGithub));
-}
-
-function savePendingGithubNames(names) {
-  localStorage.setItem(STORAGE.pendingGithub, JSON.stringify(normalizePeople(names)));
-}
-
-function queueGithubParticipant(name) {
-  const pending = readPendingGithubNames();
-  if (!pending.includes(name)) pending.push(name);
-  savePendingGithubNames(pending);
-}
-
-function removePendingGithubParticipant(name) {
-  savePendingGithubNames(readPendingGithubNames().filter(n => n !== name));
-}
-
-async function autoRegisterParticipant(name) {
-  if (!githubWriteConfigured()) {
-    setSyncStatus('참가자는 등록됨 · GitHub 자동저장 설정 대기 중');
-    return { registered: false, reason: 'not-configured' };
-  }
-
-  setSyncStatus(`${name}님 GitHub 자동 저장 중...`);
-  try {
-    let remote = await fetchGithubDatabase();
-
-    // GitHub에 이미 있으면 아무것도 쓰지 않습니다.
-    if (remote.names.includes(name)) {
-      participantDB = remote.names;
-      saveDatabaseLocal();
-      removePendingGithubParticipant(name);
-      setSyncStatus(`GitHub DB 동기화 완료 · ${participantDB.length}명`, true);
-      render();
-      return { registered: false, duplicate: true };
-    }
-
-    const merged = normalizePeople([...remote.names, name]);
-    try {
-      await writeGithubDatabase(merged, remote.sha);
-    } catch (error) {
-      // 다른 사용자가 같은 시점에 저장한 경우 최신 파일을 다시 읽어 중복 여부를 확인합니다.
-      if (String(error.message).includes('409')) {
-        remote = await fetchGithubDatabase();
-        if (remote.names.includes(name)) {
-          participantDB = remote.names;
-          saveDatabaseLocal();
-          removePendingGithubParticipant(name);
-          setSyncStatus(`GitHub DB 동기화 완료 · ${participantDB.length}명`, true);
-          render();
-          return { registered: false, duplicate: true };
-        }
-        await writeGithubDatabase(normalizePeople([...remote.names, name]), remote.sha);
-      } else {
-        throw error;
-      }
-    }
-
-    participantDB = normalizePeople([...remote.names, name]);
-    saveDatabaseLocal();
-    removePendingGithubParticipant(name);
-    setSyncStatus(`GitHub 자동저장 완료 · ${participantDB.length}명`, true);
-    render();
-    toast(`${name}님이 GitHub 참가자 DB에 자동 저장되었습니다.`);
-    return { registered: true };
-  } catch (error) {
-    console.error('GitHub participant save failed:', error);
-    queueGithubParticipant(name);
-    setSyncStatus(`참가자 등록 완료 · GitHub 자동저장 재시도 대기 (${name})`);
-    return { registered: false, error };
-  }
-}
-
-let githubSyncPromise = null;
-async function syncPendingParticipants() {
-  if (githubSyncPromise || !githubWriteConfigured()) return;
-  const pending = readPendingGithubNames();
-  if (!pending.length) return;
-
-  githubSyncPromise = (async () => {
-    for (const name of pending) {
-      await autoRegisterParticipant(name);
-    }
-  })().finally(() => { githubSyncPromise = null; });
-
-  await githubSyncPromise;
-}
-
-function saveDatabaseToGithub() {
-  document.querySelector('.github-settings')?.setAttribute('open', '');
-  $('githubOwnerInput')?.focus();
-  alertUser('참가자 등록 시 GitHub에 자동 저장됩니다.\n\n이 버튼은 수동 저장 버튼이 아니라 자동저장 설정을 여는 용도로 변경되었습니다.');
-}
-
-function updateGithubFields() {
-  $('githubOwnerInput').value = githubSettings.owner || '';
-  $('githubRepoInput').value = githubSettings.repo || '';
-  $('githubBranchInput').value = githubSettings.branch || 'main';
-  $('githubTokenInput').value = githubSettings.token || '';
-}
-
 function toast(msg) {
   const el = $('toast');
   el.textContent = msg;
@@ -314,7 +85,6 @@ function render() {
   $('personEmpty').style.display = people.length ? 'none' : 'block';
   $('databaseEmpty').style.display = participantDB.length ? 'none' : 'block';
 
-  // 방 목록 자체도 숫자 오름차순으로 정렬합니다. 1, 2, 10 순서가 보장됩니다.
   $('roomList').innerHTML = rooms.map((r, i) => `
     <div class="chip">
       <span>${esc(r.name)}번 방</span>
@@ -375,18 +145,12 @@ function addPerson(name) {
     return false;
   }
 
-  // 참가자 등록은 GitHub 응답을 기다리지 않고 즉시 완료합니다.
-  // 네트워크 오류가 있어도 현재 모임과 로컬 공유 DB 화면에서 이름이 사라지지 않습니다.
   people.push(name);
   participantDB = normalizePeople([...participantDB, name]);
   saveCurrent();
   saveDatabaseLocal();
-  queueGithubParticipant(name);
   render();
   toast(`${name}님을 참석자로 등록했습니다.`);
-
-  // GitHub 저장은 백그라운드에서 자동 처리합니다.
-  void syncPendingParticipants();
   return true;
 }
 
@@ -398,7 +162,7 @@ function addPersonFromInput() {
   }
 }
 
-async function addPersonFromDB(index) {
+function addPersonFromDB(index) {
   const name = participantDB[index];
   if (!name) return;
   if (people.includes(name)) {
@@ -436,7 +200,6 @@ function removeFromDB(i) {
   participantDB.splice(i, 1);
   saveDatabaseLocal();
   render();
-  setSyncStatus('DB에서 삭제했습니다. GitHub에 반영하려면 GitHub 저장을 눌러주세요.');
 }
 
 function shuffle(array) {
@@ -457,7 +220,6 @@ function getGroupSizes(roomCount, personCount) {
 }
 
 function buildAssignments() {
-  // 방의 실제 랜덤 배정은 유지하되, 결과 표시 전에는 반드시 오름차순 정렬합니다.
   const shuffledRooms = shuffle(normalizeRooms(rooms));
   const sizes = getGroupSizes(shuffledRooms.length, people.length);
   const groups = shuffledRooms.map((room, i) => ({ room, capacity: sizes[i], people: [] }));
@@ -496,7 +258,6 @@ function draw() {
     return;
   }
 
-  // 핵심: 표시용 배열을 다시 숫자 기준으로 정렬합니다. 1, 2, 3, 10, 11...
   groups.sort(compareRooms);
 
   $('result').innerHTML = `
@@ -523,49 +284,12 @@ $('roomInput').addEventListener('keydown', e => { if (e.key === 'Enter') addRoom
 $('personInput').addEventListener('keydown', e => { if (e.key === 'Enter') addPersonFromInput(); });
 $('helpBtn').addEventListener('click', () => $('helpDialog').showModal());
 $('closeHelp').addEventListener('click', () => $('helpDialog').close());
-$('reloadDatabaseBtn').addEventListener('click', () => loadSharedDatabase(true));
-$('saveDatabaseGithubBtn').addEventListener('click', saveDatabaseToGithub);
-$('saveGithubSettingsBtn').addEventListener('click', async () => {
-  let owner = $('githubOwnerInput').value.trim();
-  let repo = $('githubRepoInput').value.trim();
-  const parsed = parseRepoInput(repo) || parseRepoInput(owner);
-  if (parsed) { owner = parsed.owner; repo = parsed.repo; }
-  githubSettings = {
-    owner,
-    repo,
-    branch: $('githubBranchInput').value.trim() || 'main',
-    token: $('githubTokenInput').value.trim()
-  };
-  saveGithubSettings();
-  updateGithubFields();
-  if (!githubConfigured()) {
-    alertUser('GitHub 사용자/조직명과 저장소 이름을 입력해주세요.');
-    return;
-  }
-  try {
-    setSyncStatus('GitHub 연결 확인 중...');
-    await loadSharedDatabase(false).then(() => syncPendingParticipants());
-    if (!githubWriteConfigured()) {
-      alertUser('공유 DB는 연결되었습니다.\n\n신규 참가자를 GitHub에 자동 저장하려면 Fine-grained Token을 입력하고 Contents: Read and write 권한을 부여해주세요.');
-      document.querySelector('.github-settings')?.setAttribute('open', '');
-      return;
-    }
-    const remote = await fetchGithubDatabase();
-    setSyncStatus(`GitHub 자동저장 준비 완료 · 현재 ${remote.names.length}명`, true);
-    toast('GitHub 자동저장이 활성화되었습니다.');
-    void syncPendingParticipants();
-  } catch (error) {
-    setSyncStatus('GitHub 연결 실패');
-    alertUser(`GitHub 연결에 실패했습니다.\n\n${error.message}`);
-  }
-});
-$('clearDatabaseBtn').addEventListener('click', async () => {
+$('clearDatabaseBtn').addEventListener('click', () => {
   if (!participantDB.length) { alertUser('삭제할 참가자 DB가 없습니다.'); return; }
   if (!window.confirm('저장된 참가자 DB를 모두 삭제할까요?\n현재 모임 참석자는 삭제되지 않습니다.')) return;
   participantDB = [];
   saveDatabaseLocal();
   render();
-  setSyncStatus('참가자 DB를 비웠습니다. GitHub에 반영하려면 저장 버튼을 눌러주세요.');
 });
 $('resetBtn').addEventListener('click', () => {
   if (!window.confirm('현재 모임의 방과 참석자를 초기화할까요?\n참가자 DB는 유지됩니다.')) return;
@@ -577,7 +301,4 @@ $('resetBtn').addEventListener('click', () => {
   toast('현재 모임을 초기화했습니다. 참가자 DB는 유지됩니다.');
 });
 
-updateGithubFields();
-participantDB = normalizePeople(readJSON(STORAGE.database));
 render();
-loadSharedDatabase(false).then(() => syncPendingParticipants());
