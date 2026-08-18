@@ -25,7 +25,7 @@
     <section class="card" id="roomsCard">
       <div class="card-title"><span class="title-icon">🏌️</span><strong>방 등록</strong><span class="count" id="roomCount">0개</span></div>
       <div class="input-row">
-        <input id="roomInput" type="text" placeholder="방 번호 (예: 1, 2A)" maxlength="20" autocomplete="off">
+        <input id="roomInput" type="number" inputmode="numeric" pattern="[0-9]*" placeholder="방 번호 입력" min="1" step="1" autocomplete="off">
         <button class="add-btn" id="addRoomBtn">추가</button>
       </div>
       <label class="toggle-row"><input id="leftRoomToggle" type="checkbox"><span class="switch"></span>좌타방으로 설정</label>
@@ -44,6 +44,13 @@
       <div class="chips" id="personList"></div>
     </section>
 
+    <section class="card db-card">
+      <div class="card-title"><span class="title-icon">🗂️</span><strong>참가자 DB</strong><span class="count" id="dbCount">0명</span></div>
+      <p class="db-guide">한 번 등록한 참가자는 자동 저장됩니다. 이름을 누르면 이번 모임에 바로 추가됩니다.</p>
+      <div class="db-list" id="dbList"></div>
+      <div class="empty" id="dbEmpty">저장된 참가자가 없습니다</div>
+    </section>
+
     <button class="draw-btn" id="drawBtn"><span>🎲</span> 랜덤 방배정</button>
     <p class="hint">참석자와 방을 먼저 등록한 뒤 랜덤 방배정을 눌러주세요.</p>
     <section class="result" id="result" aria-live="polite"></section>
@@ -51,7 +58,7 @@
   </main>
 
   <dialog id="helpDialog">
-    <div class="dialog-inner"><button class="close" id="closeHelp">×</button><h3>사용 방법</h3><ol><li>방 번호를 등록합니다.</li><li>참석자 이름을 등록합니다.</li><li>좌타방/좌타자 여부를 선택할 수 있습니다.</li><li><b>랜덤 방배정</b>을 누르면 참석자가 무작위로 배정됩니다.</li></ol><p>데이터는 이 기기의 브라우저에 자동 저장됩니다.</p></div>
+    <div class="dialog-inner"><button class="close" id="closeHelp">×</button><h3>사용 방법</h3><ol><li>방 번호를 등록합니다.</li><li>참석자 이름을 등록합니다.</li><li>좌타방/좌타자 여부를 선택할 수 있습니다.</li><li><b>랜덤 방배정</b>을 누르면 모든 방에 2~3명씩 배정됩니다.</li></ol><p>방·이번 모임 참가자·참가자 DB는 이 기기의 브라우저에 자동 저장됩니다. 참가자 DB는 모임 초기화 후에도 유지됩니다.</p></div>
   </dialog>
   <div class="toast" id="toast"></div>
   <script src="app.js"></script>
