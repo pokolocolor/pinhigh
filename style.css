@@ -556,3 +556,35 @@ dialog::backdrop{background:rgba(6,1,12,.68)}
     min-height:100vh
   }
 }
+
+/* 상단 전체 폭 배너 */
+.hero-banner {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  overflow: hidden;
+  line-height: 0; /* 이미지 아래 생기는 미세한 여백 제거 */
+}
+
+.hero-banner img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+}
+
+/* iPhone 노치/다이나믹 아일랜드 영역까지 배너가 덮도록(선택사항) */
+@supports (padding: max(0px)) {
+  .hero-banner {
+    padding-top: 0;
+  }
+}
+
+/* 가로 스크롤 방지 안전장치 */
+html, body {
+  overflow-x: hidden;
+}
+
+/* 기존 .hero 섹션의 로고 관련 스타일 정리 (logo-wrap을 더 이상 쓰지 않으므로) */
+.hero .logo-wrap { display: none; } /* 혹시 HTML에서 완전히 못 지웠을 경우를 대비한 안전장치 */
+
