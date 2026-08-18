@@ -50,7 +50,25 @@
         <strong>참가자 데이터베이스</strong>
         <span class="count" id="databaseCount">0명</span>
       </div>
-      <p class="db-guide">한 번 등록한 참가자는 이 기기에 저장됩니다. 다음 모임에서는 <b>이름을 눌러 바로 등록</b>하세요.</p>
+      <p class="db-guide">참가자 DB는 GitHub의 <b>공유 데이터</b>를 기준으로 표시됩니다. 다음 모임에서는 <b>이름을 눌러 바로 등록</b>하세요.</p>
+      <div class="sync-panel">
+        <div class="sync-status" id="syncStatus">공유 DB 연결 확인 중...</div>
+        <div class="sync-actions">
+          <button type="button" class="sync-btn" id="reloadDatabaseBtn">공유 DB 새로고침</button>
+          <button type="button" class="sync-btn primary" id="saveDatabaseGithubBtn">GitHub에 저장</button>
+        </div>
+        <details class="github-settings">
+          <summary>GitHub 공유 DB 설정</summary>
+          <div class="github-fields">
+            <input id="githubOwnerInput" type="text" placeholder="GitHub 사용자/조직명" autocomplete="off">
+            <input id="githubRepoInput" type="text" placeholder="저장소 이름" autocomplete="off">
+            <input id="githubBranchInput" type="text" placeholder="브랜치 (예: main)" value="main" autocomplete="off">
+            <input id="githubTokenInput" type="password" placeholder="GitHub Fine-grained Token" autocomplete="off">
+            <button type="button" class="sync-btn primary" id="saveGithubSettingsBtn">설정 저장</button>
+          </div>
+          <p>공개 GitHub 저장소라면 다른 사용자는 별도 설정 없이 공유 DB를 읽을 수 있습니다. DB를 GitHub에 쓰려면 <b>Contents: Read and write</b> 권한의 Fine-grained Token이 필요합니다. 토큰은 저장소에 업로드되지 않고 이 브라우저에만 저장됩니다.</p>
+        </details>
+      </div>
       <div class="database-list" id="databaseList"></div>
       <div class="db-empty" id="databaseEmpty">아직 저장된 참가자가 없습니다.</div>
       <button class="db-clear-btn" id="clearDatabaseBtn" type="button">참가자 DB 전체 삭제</button>
@@ -72,8 +90,9 @@
         <li>참석자를 직접 입력하거나 참가자 DB의 이름을 눌러 등록합니다.</li>
         <li>방 수와 참석자 수가 맞아야 랜덤 방배정이 가능합니다.</li>
         <li>배정 결과는 모든 방에 2~3명이 들어가도록 생성됩니다.</li>
+        <li>배정 결과는 <b>방 번호 오름차순</b>으로 표시됩니다.</li>
       </ol>
-      <p>참가자 DB는 현재 모임 초기화와 별도로 이 기기의 브라우저에 저장됩니다.</p>
+      <p>참가자 DB는 GitHub의 <b>data/participants.json</b>을 공유 원본으로 사용합니다. GitHub 저장 기능을 사용하면 다른 사용자도 같은 DB를 볼 수 있습니다.</p>
     </div>
   </dialog>
   <div class="toast" id="toast" role="status"></div>
