@@ -56,25 +56,7 @@
         <strong>참가자 데이터베이스</strong>
         <span class="count" id="databaseCount">0명</span>
       </div>
-      <p class="db-guide">참가자 DB에는 <b>이름만</b> 저장됩니다. 관리자 설정을 한 번 완료하면, 신규 이름을 등록하는 즉시 GitHub의 <b>data/participants.json</b>에 자동 저장됩니다. 이미 등록된 이름은 GitHub에서 확인 후 다시 저장하지 않습니다. 다음 모임에서는 이름을 눌러 바로 등록하세요.</p>
-      <div class="sync-panel">
-        <div class="sync-status" id="syncStatus">공유 DB 연결 확인 중...</div>
-        <div class="sync-actions">
-          <button type="button" class="sync-btn" id="reloadDatabaseBtn">공유 DB 새로고침</button>
-          <button type="button" class="sync-btn primary" id="saveDatabaseGithubBtn">자동저장 설정</button>
-        </div>
-        <details class="github-settings">
-          <summary>GitHub 자동저장 설정 (관리자 1회)</summary>
-          <div class="github-fields">
-            <input id="githubOwnerInput" type="text" placeholder="GitHub 사용자/조직명" autocomplete="off">
-            <input id="githubRepoInput" type="text" placeholder="저장소 이름" autocomplete="off">
-            <input id="githubBranchInput" type="text" placeholder="브랜치 (예: main)" value="main" autocomplete="off">
-            <input id="githubTokenInput" type="password" placeholder="GitHub Fine-grained Token" autocomplete="off">
-            <button type="button" class="sync-btn primary" id="saveGithubSettingsBtn">설정 저장</button>
-          </div>
-          <p>모든 사용자는 GitHub의 공개 DB를 읽습니다. <b>신규 참가자 자동등록은 GitHub 쓰기 권한이 있는 관리자 브라우저</b>에서 동작합니다. Fine-grained Token은 <b>Contents: Read and write</b> 권한이 필요하며 저장소에는 업로드되지 않습니다.</p>
-        </details>
-      </div>
+      <p class="db-guide">참가자 DB에는 <b>이름만</b> 저장되며, <b>이 기기의 브라우저</b>에 로컬로 보관됩니다. 한 번 등록한 이름은 다음 모임에서도 목록에 남아있어 눌러서 바로 등록할 수 있습니다.</p>
       <div class="database-list" id="databaseList"></div>
       <div class="db-empty" id="databaseEmpty">아직 저장된 참가자가 없습니다.</div>
       <button class="db-clear-btn" id="clearDatabaseBtn" type="button">참가자 DB 전체 삭제</button>
@@ -93,12 +75,12 @@
       <ol>
         <li>방 번호를 입력하면 모바일에서는 숫자 키패드가 표시됩니다.</li>
         <li>방은 등록 후 <b>“1번 방”</b>처럼 표시됩니다.</li>
-        <li>참석자는 이름만 입력합니다. 처음 등록한 이름은 GitHub 공유 DB에 자동 등록됩니다.</li>
+        <li>참석자는 이름만 입력합니다. 처음 등록한 이름은 참가자 DB에 저장되어 다음 모임에서도 목록에서 바로 선택할 수 있습니다.</li>
         <li>방 수와 참석자 수가 맞아야 랜덤 방배정이 가능합니다.</li>
         <li>배정 결과는 모든 방에 2~3명이 들어가도록 생성됩니다.</li>
         <li>방 목록과 배정 결과 모두 <b>방 번호 오름차순</b>으로 표시됩니다.</li>
       </ol>
-      <p>참가자 DB는 GitHub의 <b>data/participants.json</b>을 공유 원본으로 사용합니다. 참가자는 이름만 저장되며, 신규 이름은 관리자 브라우저에서 GitHub에 자동 등록됩니다.</p>
+      <p>참가자 DB는 <b>이 브라우저(기기)</b>에만 저장됩니다. 다른 기기와는 공유되지 않으니, 항상 같은 기기에서 관리하는 것을 추천합니다.</p>
     </div>
   </dialog>
   <div class="toast" id="toast" role="status"></div>
