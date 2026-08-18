@@ -289,7 +289,8 @@ function draw() {
     return;
   }
 
-  groups.sort(compareRooms);
+  // 그룹 안의 실제 room 객체(a.room, b.room)를 비교해야 숫자 정렬이 정상 동작합니다.
+  groups.sort((a, b) => compareRooms(a.room, b.room));
 
   $('result').innerHTML = `
     <div class="result-card">
