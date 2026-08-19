@@ -1,5 +1,5 @@
 /* =========================================================
-   TEAM PINHIGH GOLF CLUB - style.css (전체 통합본)
+   TEAM PINHIGH GOLF CLUB - style.css (전체 통합본, v8)
    ========================================================= */
 
 * {
@@ -357,7 +357,7 @@ a {
 }
 
 /* =========================================================
-   배정 방식 선택 카드 (신규)
+   배정 방식 선택 카드
    ========================================================= */
 .mode-select-card {
   border-color: rgba(255, 46, 147, 0.25);
@@ -398,7 +398,7 @@ a {
 }
 
 /* =========================================================
-   핸디 균형 배정 참가자 입력 (신규)
+   핸디 균형 배정 참가자 입력
    ========================================================= */
 .handicap-rows {
   display: flex;
@@ -552,6 +552,7 @@ a {
   border-radius: 14px;
   padding: 12px;
   background: rgba(255, 255, 255, 0.04);
+  position: relative;
 }
 .room-result-title {
   display: flex;
@@ -657,10 +658,12 @@ a {
   to   { transform: translateY(-1px) scale(1.03); }
 }
 
-/* 확정된 방: 도장 찍히는 효과 (추가될 때 한 번만 재생) */
+/* 확정된 방: 도장 찍히는 효과
+   -> "완료" 배지는 카드 안쪽 텍스트(인원수/좌타방)와 겹치지 않도록
+      카드 테두리 모서리에 리본처럼 살짝 걸치는 위치로 배치함 */
 .room-result.reveal-item-done {
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   animation: stampIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 @keyframes stampIn {
@@ -668,4 +671,191 @@ a {
   60%  { transform: scale(0.96) rotate(1.5deg); opacity: 1; }
   100% { transform: scale(1) rotate(0deg); opacity: 1; }
 }
-.room-result.reveal-item-
+.room-result.reveal-item-done::after {
+  content: '완료';
+  position: absolute;
+  top: -10px;
+  right: -6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #fff;
+  background: #ff2e93;
+  border: none;
+  border-radius: 6px;
+  padding: 2px 8px;
+  box-shadow: 0 2px 6px rgba(255, 46, 147, 0.5);
+  transform: rotate(8deg);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 2;
+  animation: stampMark 0.4s ease-out 0.15s forwards;
+}
+@keyframes stampMark {
+  0%   { opacity: 0; transform: rotate(8deg) scale(2.2); }
+  70%  { opacity: 1; transform: rotate(8deg) scale(0.85); }
+  100% { opacity: 1; transform: rotate(8deg) scale(1); }
+}
+
+/* =========================================================
+   핸디 균형 배정 결과 화면
+   ========================================================= */
+.handicap-overview {
+  display: flex;
+  gap: 10px;
+  margin: 4px 0 14px;
+  flex-wrap: wrap;
+}
+.overview-item {
+  flex: 1;
+  min-width: 100px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 8px 10px;
+  text-align: center;
+}
+.overview-item span {
+  display: block;
+  font-size: 11px;
+  color: #a89ecb;
+}
+.overview-item b {
+  font-size: 15px;
+  color: #fff;
+}
+
+.handicap-room .handi-badge {
+  color: #ffb703;
+  margin-left: 3px;
+  font-weight: 600;
+  font-size: 11px;
+}
+
+.handicap-stats {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.stat-chip {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: #d8d1f0;
+}
+.stat-chip b { color: #fff; }
+.stat-chip.dev-good { color: #7be495; }
+.stat-chip.dev-ok   { color: #ffd166; }
+.stat-chip.dev-warn { color: #ff6b6b; }
+
+.balance-bar-track {
+  margin-top: 8px;
+  height: 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.balance-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4dd0e1, #ff2e93);
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+
+/* =========================================================
+   도움말 다이얼로그
+   ========================================================= */
+dialog#helpDialog {
+  border: none;
+  border-radius: 16px;
+  padding: 0;
+  max-width: 420px;
+  width: 90vw;
+  background: #241238;
+  color: #f2edff;
+}
+dialog#helpDialog::backdrop {
+  background: rgba(0, 0, 0, 0.55);
+}
+.dialog-inner {
+  position: relative;
+  padding: 22px 20px 24px;
+}
+.dialog-inner h3 {
+  margin: 0 0 12px;
+  font-size: 17px;
+  color: #fff;
+}
+.dialog-inner ol {
+  margin: 0 0 14px;
+  padding-left: 18px;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: #d8d1f0;
+}
+.dialog-inner ol li {
+  margin-bottom: 8px;
+}
+.dialog-inner b {
+  color: #ff2e93;
+}
+.dialog-inner p {
+  font-size: 12.5px;
+  color: #a89ecb;
+  margin: 0;
+  line-height: 1.5;
+}
+.dialog-inner .close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  font-size: 16px;
+}
+.dialog-inner .close:hover {
+  background: #ff2e93;
+}
+
+/* =========================================================
+   토스트 알림
+   ========================================================= */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translate(-50%, 12px);
+  background: rgba(20, 8, 36, 0.95);
+  border: 1px solid rgba(255, 46, 147, 0.3);
+  color: #fff;
+  font-size: 13.5px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  z-index: 999;
+  max-width: 88vw;
+  text-align: center;
+}
+.toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* =========================================================
+   푸터
+   ========================================================= */
+footer {
+  text-align: center;
+  font-size: 12px;
+  color: #6f6390;
+  margin-top: 28px;
+  padding-bottom: 10px;
+}
