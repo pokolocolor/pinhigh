@@ -1,5 +1,5 @@
 /* =========================================================
-   TEAM PINHIGH GOLF CLUB - style.css (전체 통합본, v8)
+   TEAM PINHIGH GOLF CLUB - style.css (전체 통합본, v9)
    ========================================================= */
 
 * {
@@ -127,14 +127,9 @@ a {
   border-radius: 999px;
   font-weight: 700;
 }
-.section-hint {
-  font-size: 12.5px;
-  color: #a89ecb;
-  margin: -4px 0 12px;
-}
 
 /* =========================================================
-   입력 행 (방/참석자 등록 공용)
+   입력 행 (방 등록 공용)
    ========================================================= */
 .input-row {
   display: flex;
@@ -149,6 +144,7 @@ a {
   background: rgba(255, 255, 255, 0.06);
   color: #fff;
   font-size: 15px;
+  min-width: 0;
 }
 .input-row input::placeholder {
   color: #8f85ad;
@@ -166,9 +162,26 @@ a {
   font-size: 14px;
   border-radius: 10px;
   padding: 0 18px;
+  flex-shrink: 0;
 }
 .add-btn:active {
   transform: scale(0.97);
+}
+
+/* 참석자 등록 전용 입력 행 (이름 + 핸디 + 버튼) */
+.attendee-input-row {
+  flex-wrap: wrap;
+}
+.attendee-input-row #personInput {
+  flex: 1 1 140px;
+}
+.attendee-input-row #personHandicapInput {
+  flex: 0 0 78px;
+  text-align: center;
+}
+.attendee-input-row .add-btn {
+  flex: 0 0 64px;
+  padding: 0 10px;
 }
 
 /* 좌타 토글 스위치 */
@@ -260,12 +273,23 @@ a {
   color: #fff;
 }
 
-/* 좌타 뱃지 (공용) */
+/* 좌타 뱃지 */
 .left-tag {
   color: #ff2e93;
   font-size: 11px;
   font-weight: 700;
   background: rgba(255, 46, 147, 0.12);
+  border-radius: 6px;
+  padding: 1px 6px;
+  margin-left: 2px;
+}
+
+/* 핸디 뱃지 */
+.handi-tag {
+  color: #4dd0e1;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(77, 208, 225, 0.12);
   border-radius: 6px;
   padding: 1px 6px;
   margin-left: 2px;
@@ -305,6 +329,7 @@ a {
   padding: 9px 12px;
   color: #fff;
   font-size: 13.5px;
+  flex-wrap: wrap;
 }
 .db-person-btn .db-name {
   font-weight: 600;
@@ -357,142 +382,47 @@ a {
 }
 
 /* =========================================================
-   배정 방식 선택 카드
+   방배정 버튼 (랜덤 / 핸디 균형)
    ========================================================= */
-.mode-select-card {
-  border-color: rgba(255, 46, 147, 0.25);
-}
-.mode-toggle {
+.draw-btn-group {
   display: flex;
   gap: 10px;
-  margin: 4px 0 10px;
+  margin-bottom: 10px;
 }
-.mode-option {
+.draw-btn {
   flex: 1;
+  border: none;
+  border-radius: 14px;
+  padding: 15px 8px;
+  font-size: 14.5px;
+  font-weight: 800;
+  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 10px 8px;
-  border: 1.5px solid rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 13.5px;
-  color: #cfc7e6;
-  transition: all 0.2s ease;
-}
-.mode-option input {
-  accent-color: #ff2e93;
-}
-.mode-option:has(input:checked) {
-  border-color: #ff2e93;
-  background: rgba(255, 46, 147, 0.15);
-  color: #fff;
-  box-shadow: 0 0 10px rgba(255, 46, 147, 0.25);
-}
-.mode-desc {
-  font-size: 12.5px;
-  color: #a89ecb;
-  margin: 0;
-}
-
-/* =========================================================
-   핸디 균형 배정 참가자 입력
-   ========================================================= */
-.handicap-rows {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-.handicap-row {
-  display: grid;
-  grid-template-columns: 1fr 90px 36px;
-  gap: 8px;
-  align-items: center;
-}
-.handicap-row input {
-  padding: 9px 10px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
-  font-size: 14px;
-  width: 100%;
-}
-.handicap-row input::placeholder {
-  color: #8f85ad;
-}
-.handicap-row input:focus {
-  outline: none;
-  border-color: #ff2e93;
-}
-.handicap-remove {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(255, 46, 147, 0.15);
-  color: #ff2e93;
-  font-size: 16px;
-}
-.handicap-remove:hover {
-  background: #ff2e93;
-  color: #fff;
-}
-.handicap-actions {
-  display: flex;
-  gap: 8px;
-}
-.btn-secondary {
-  flex: 1;
-  padding: 10px;
-  border-radius: 10px;
-  border: 1.5px solid rgba(255, 255, 255, 0.25);
-  background: transparent;
-  color: #fff;
-  font-weight: 600;
-  font-size: 13.5px;
-}
-.btn-secondary:hover {
-  border-color: #ff2e93;
-  color: #ff2e93;
-}
-
-/* =========================================================
-   방배정 버튼 및 안내 문구
-   ========================================================= */
-.draw-btn {
-  width: 100%;
-  border: none;
-  border-radius: 14px;
-  padding: 16px;
-  font-size: 17px;
-  font-weight: 800;
-  color: #fff;
-  background: linear-gradient(135deg, #ff2e93, #a24bff, #4dd0e1);
-  background-size: 200% 200%;
-  box-shadow: 0 6px 20px rgba(255, 46, 147, 0.35);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
   transition: transform 0.15s ease;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
 }
-.draw-btn:active {
-  transform: scale(0.98);
+.draw-btn-random {
+  background: linear-gradient(135deg, #ff2e93, #a24bff);
+}
+.draw-btn-handicap {
+  background: linear-gradient(135deg, #4dd0e1, #6c5ce7);
+}
+.draw-btn:active:not(:disabled) {
+  transform: scale(0.97);
 }
 .draw-btn:disabled {
-  opacity: 0.85;
+  opacity: 0.6;
   cursor: not-allowed;
 }
 .draw-btn.drawing {
   animation: btnPulse 1s ease-in-out infinite;
 }
 @keyframes btnPulse {
-  0%, 100% { box-shadow: 0 6px 20px rgba(255, 46, 147, 0.35); }
-  50% { box-shadow: 0 6px 28px rgba(255, 46, 147, 0.6); }
+  0%, 100% { box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25); }
+  50% { box-shadow: 0 6px 28px rgba(255, 46, 147, 0.55); }
 }
 .dice-spin,
 .calc-spin {
@@ -502,6 +432,12 @@ a {
 @keyframes spin {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
+}
+
+@media (max-width: 380px) {
+  .draw-btn-group {
+    flex-direction: column;
+  }
 }
 
 .hint {
@@ -592,7 +528,6 @@ a {
    방별 순차 셔플 / 확정 / 대기 상태
    ========================================================= */
 
-/* 대기 중인 방: 흐릿하고 반투명 */
 .room-result.pending-room {
   opacity: 0.35;
   filter: grayscale(0.5) blur(0.2px);
@@ -604,7 +539,6 @@ a {
   color: #9a9aa8;
 }
 
-/* 셔플 중인 방: 다크 톤 그라디언트 배경 + 반짝이는 테두리 */
 .room-result.shuffling-room {
   position: relative;
   z-index: 0;
@@ -658,9 +592,6 @@ a {
   to   { transform: translateY(-1px) scale(1.03); }
 }
 
-/* 확정된 방: 도장 찍히는 효과
-   -> "완료" 배지는 카드 안쪽 텍스트(인원수/좌타방)와 겹치지 않도록
-      카드 테두리 모서리에 리본처럼 살짝 걸치는 위치로 배치함 */
 .room-result.reveal-item-done {
   position: relative;
   overflow: visible;
