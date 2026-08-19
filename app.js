@@ -311,13 +311,14 @@ function renderPreview(groups) {
   `;
 }
 
-function renderFinalResult(groups) {
+// revealStep: 방이 한 개씩 공개되는 간격(초). 기본 2초.
+function renderFinalResult(groups, revealStep = 2) {
   $('result').innerHTML = `
     <div class="result-card">
       <div class="result-head"><strong>🎉 방배정 완료</strong><span>${people.length}명 · ${groups.length}개 방</span></div>
       <div class="assignment">
         ${groups.map((g, i) => `
-          <div class="room-result reveal-item" style="animation-delay: ${i * 0.18}s">
+          <div class="room-result reveal-item" style="animation-delay: ${i * revealStep}s">
             <div class="room-result-title"><b>🏌️ ${esc(g.room.name)}번 방</b><span>${g.people.length}명${g.room.left ? ' · 좌타방' : ''}</span></div>
             <div class="result-people">${g.people.map(p => `
               <span class="person${p.left ? ' left' : ''}">${esc(p.name)}${leftTag(p.left)}</span>
@@ -349,8 +350,9 @@ function draw() {
 
   $('result').scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-  const shuffleDuration = 1600;
-  const shuffleInterval = 100;
+  const shuffleDuration = 1600;   // 셔플(가짜 배정) 애니메이션 지속 시간
+  const shuffleInterval = 100;    // 셔플 화면 갱신 간격
+  const revealStepSeconds = 2;    // 방 하나씩 공개되는 간격 (요청: 2초)
   let elapsed = 0;
 
   renderPreview(shuffleGroupsPreview());
@@ -359,11 +361,17 @@ function draw() {
     elapsed += shuffleInterval;
     if (elapsed >= shuffleDuration) {
       clearInterval(timer);
-      renderFinalResult(groups);
-      btn.disabled = false;
-      btn.classList.remove('drawing');
-      btn.innerHTML = originalHTML;
-      isDrawing = false;
+      renderFinalResult(groups, revealStepSeconds);
+
+      // 방이 전부 공개될 때까지 버튼을 잠금 상태로 유지
+      const totalRevealMs = groups.length * revealStepSeconds * 1000 + 500;
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.classList.remove('drawing');
+        btn.innerHTML = originalHTML;
+        isDrawing = false;
+      }, totalRevealMs);
+
       $('result').scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }, shuffleInterval);
