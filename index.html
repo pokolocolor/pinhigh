@@ -13,7 +13,7 @@
   <link rel="apple-touch-icon-precomposed" sizes="180x180" href="apple-touch-icon.png">
   <link rel="manifest" href="manifest.webmanifest">
   <title>핀하이 정모 방뽑기</title>
-  <link rel="stylesheet" href="style.css?v=12">
+  <link rel="stylesheet" href="style.css?v=13">
 </head>
 <body>
 
@@ -72,7 +72,7 @@
       <button class="draw-btn draw-btn-random" id="drawRandomBtn"><span>🎲</span> 랜덤 방배정</button>
       <button class="draw-btn draw-btn-handicap" id="drawHandicapBtn"><span>⚖️</span> 핸디 균형 배정</button>
     </div>
-    <p class="hint"><b>랜덤 방배정</b>은 모든 방이 반드시 <b>2명 또는 3명</b>으로 배정되며, 좌타 참석자는 좌타방에 우선 배정됩니다. <b>핸디 균형 배정</b>은 인원 조건 없이, 참석자 등록 시 입력한 핸디를 기준으로 각 방의 실력이 최대한 균등해지도록 배정합니다.</p>
+    <p class="hint"><b>랜덤 방배정</b>은 모든 방이 반드시 <b>2명 또는 3명</b>으로 배정되며, 좌타 참석자는 좌타방에 우선 배정됩니다. <b>핸디 균형 배정</b>은 인원 조건 없이, 좌타 참석자를 좌타방에 우선 배치한 뒤 나머지 참석자의 핸디를 기준으로 각 방의 실력이 최대한 균등해지도록 배정합니다.</p>
     <section class="result" id="result" aria-live="polite"></section>
     <footer>TEAM PINHIGH GOLF CLUB · 좋은사람, 좋은 샷, 좋은 하루</footer>
   </main>
@@ -87,7 +87,7 @@
         <li>참석자는 이름을 입력하고 핸디 버튼을 눌러 팝업에서 값을 선택합니다(−25 ~ 40). 좌타라면 토글을 켜서 등록합니다. 핸디는 필수 선택값입니다.</li>
         <li>처음 등록한 참석자는 이름·핸디 정보가 참가자 DB에 저장되어 다음 모임에서도 목록에서 바로 선택할 수 있습니다.</li>
         <li>방배정은 <b>🎲 랜덤 방배정</b>과 <b>⚖️ 핸디 균형 배정</b> 중 원하는 버튼을 눌러 진행할 수 있습니다. 랜덤 방배정은 방 수와 참석자 수가 맞아야 하며, 모든 방에 2~3명이 배정되고 좌타 참석자는 좌타방에 우선 배정됩니다.</li>
-        <li>핸디 균형 배정은 인원 조건 없이, 등록된 참석자들의 핸디를 기준으로 각 방의 실력(핸디 총합/평균)이 최대한 균등해지도록 자동으로 배정합니다.</li>
+        <li>핸디 균형 배정은 인원 조건 없이, 좌타 참석자를 좌타방에 우선 배치한 뒤 나머지 참석자들의 핸디를 기준으로 각 방의 실력(핸디 총합/평균)이 최대한 균등해지도록 자동으로 배정합니다.</li>
         <li>방 목록과 배정 결과 모두 <b>방 번호 오름차순</b>으로 표시됩니다.</li>
       </ol>
       <p>참가자 DB는 <b>이 브라우저(기기)</b>에만 저장됩니다. 다른 기기와는 공유되지 않으니, 항상 같은 기기에서 관리하는 것을 추천합니다.</p>
@@ -103,6 +103,6 @@
   </dialog>
 
   <div class="toast" id="toast" role="status"></div>
-  <script src="app.js?v=12"></script>
+  <script src="app.js?v=13"></script>
 </body>
 </html>
