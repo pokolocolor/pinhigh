@@ -823,6 +823,12 @@ async function handleImportImage(file) {
       }
     });
     setOcrLoading(false);
+
+    // ↓↓↓ 디버그용 임시 코드: 원인 파악 후 이 두 줄은 삭제해주세요 ↓↓↓
+    console.log('[OCR RAW TEXT]\n' + (data.text || ''));
+    alert(data.text || '(빈 텍스트)');
+    // ↑↑↑ 디버그용 임시 코드 ↑↑↑
+
     openImportDialog(data.text || '');
   } catch (err) {
     setOcrLoading(false);
