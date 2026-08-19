@@ -534,7 +534,6 @@ function assignByHandicap(entries, roomList) {
   const leftGroups = groups.filter(g => g.room.left);
   const hasLeftRoom = leftGroups.length > 0;
 
-  // 1단계: 좌타 참석자를 좌타방 정원 안에서 핸디 낮은(좋은) 순으로 우선 배치
   const leftPeopleSorted = shuffle(entries.filter(p => p.left)).sort((a, b) => a.handicap - b.handicap);
   const overflow = [];
 
@@ -544,18 +543,16 @@ function assignByHandicap(entries, roomList) {
       target.people.push(person);
       target.sum += person.handicap;
     } else {
-      overflow.push(person); // 좌타방이 없거나 정원이 가득 찬 경우 일반 배정으로 넘김
+      overflow.push(person);
     }
   });
 
-  // 2단계: 나머지 인원(우타 전원 + 좌타 정원 초과분)을 핸디 낮은 순으로
-  // 정렬해, 매번 인원이 가장 적은 방부터 채워 인원수와 실력을 균형있게 배정
   const rightPeople = entries.filter(p => !p.left);
   const remaining = shuffle([...rightPeople, ...overflow]).sort((a, b) => a.handicap - b.handicap);
 
   remaining.forEach(person => {
     const target = pickTargetGroup(groups);
-    if (!target) return; // 정원 총합 = 전체 인원이므로 이론상 발생하지 않음
+    if (!target) return;
     target.people.push(person);
     target.sum += person.handicap;
   });
@@ -670,6 +667,197 @@ function drawHandicap() {
 }
 
 // =========================================================
+// 이미지(캡처) 인식 기반 참석자 일괄 등록 (베타)
+// - Tesseract.js로 이미지에서 텍스트를 추출
+// - 정규식으로 이름 / 핸디(G숫자) / 좌타 여부를 1차 파싱
+// - 사용자가 팝업에서 직접 확인·수정 후 "선택 항목 등록"을 눌러야 반영
+// =========================================================
+
+let importCandidates = [];
+let importSeq = 0;
+
+function parseOcrTextToCandidates(rawText) {
+  const lines = String(rawText || '')
+    .split('\n')
+    .map(l => l.trim())
+    .filter(l => l.length >= 2);
+
+  const candidates = [];
+
+  lines.forEach(line => {
+    if (/^첫\s*참여$/.test(line)) return;
+    if (!/[가-힣a-zA-Z0-9]/.test(line)) return;
+
+    const left = /좌타/.test(line);
+
+    let handicap = null;
+    const hMatch = line.match(/g\s*(-?\d+(?:\.\d+)?)/i);
+    if (hMatch) {
+      const n = Number(hMatch[1]);
+      if (Number.isFinite(n)) handicap = n;
+    }
+
+    const parenIdx = line.indexOf('(');
+    const slashIdx = line.indexOf('/');
+    let cutIdx = -1;
+    if (parenIdx >= 0 && slashIdx >= 0) cutIdx = Math.min(parenIdx, slashIdx);
+    else if (parenIdx >= 0) cutIdx = parenIdx;
+    else if (slashIdx >= 0) cutIdx = slashIdx;
+
+    let name = cutIdx > 0 ? line.slice(0, cutIdx) : line;
+    name = name.replace(/좌타/g, '').trim();
+    if (!name) return;
+
+    candidates.push({
+      id: ++importSeq,
+      raw: line,
+      name,
+      handicap,
+      left,
+      selected: true
+    });
+  });
+
+  return candidates;
+}
+
+function renderImportList() {
+  const listEl = $('importList');
+  $('importCountLabel').textContent = `${importCandidates.length}명 인식됨`;
+
+  if (!importCandidates.length) {
+    listEl.innerHTML = `<p class="import-empty">인식된 항목이 없습니다. 다른 이미지로 다시 시도해보세요.</p>`;
+    return;
+  }
+
+  listEl.innerHTML = importCandidates.map(c => `
+    <div class="import-row" data-id="${c.id}">
+      <label class="import-check">
+        <input type="checkbox" class="import-row-check" data-id="${c.id}" ${c.selected ? 'checked' : ''}>
+      </label>
+      <div class="import-fields">
+        <input type="text" class="import-name-input" data-id="${c.id}" value="${esc(c.name)}" placeholder="이름" maxlength="20">
+        <input type="number" class="import-handi-input" data-id="${c.id}" value="${c.handicap === null || c.handicap === undefined ? '' : c.handicap}" placeholder="핸디" step="1">
+        <label class="import-left-check"><input type="checkbox" class="import-left-input" data-id="${c.id}" ${c.left ? 'checked' : ''}> 좌타</label>
+      </div>
+      <div class="import-raw" title="${esc(c.raw)}">${esc(c.raw)}</div>
+    </div>
+  `).join('');
+
+  listEl.querySelectorAll('.import-row-check').forEach(el => {
+    el.addEventListener('change', e => {
+      const id = Number(e.target.dataset.id);
+      const item = importCandidates.find(c => c.id === id);
+      if (item) item.selected = e.target.checked;
+      syncSelectAllCheckbox();
+    });
+  });
+  listEl.querySelectorAll('.import-name-input').forEach(el => {
+    el.addEventListener('input', e => {
+      const id = Number(e.target.dataset.id);
+      const item = importCandidates.find(c => c.id === id);
+      if (item) item.name = e.target.value;
+    });
+  });
+  listEl.querySelectorAll('.import-handi-input').forEach(el => {
+    el.addEventListener('input', e => {
+      const id = Number(e.target.dataset.id);
+      const item = importCandidates.find(c => c.id === id);
+      if (item) item.handicap = e.target.value === '' ? null : Number(e.target.value);
+    });
+  });
+  listEl.querySelectorAll('.import-left-input').forEach(el => {
+    el.addEventListener('change', e => {
+      const id = Number(e.target.dataset.id);
+      const item = importCandidates.find(c => c.id === id);
+      if (item) item.left = e.target.checked;
+    });
+  });
+}
+
+function syncSelectAllCheckbox() {
+  const all = importCandidates.length > 0 && importCandidates.every(c => c.selected);
+  $('importSelectAll').checked = all;
+}
+
+function openImportDialog(rawText) {
+  importCandidates = parseOcrTextToCandidates(rawText);
+  renderImportList();
+  syncSelectAllCheckbox();
+  $('importDialog').showModal();
+}
+
+function setOcrLoading(visible, percent) {
+  if (visible) {
+    $('ocrLoadingText').textContent = `이미지 분석 중... ${percent ?? 0}%`;
+    if (!$('ocrLoadingDialog').open) $('ocrLoadingDialog').showModal();
+  } else {
+    if ($('ocrLoadingDialog').open) $('ocrLoadingDialog').close();
+  }
+}
+
+async function handleImportImage(file) {
+  if (!file) return;
+  if (typeof Tesseract === 'undefined') {
+    alertUser('이미지 인식 라이브러리를 불러오지 못했습니다.\n인터넷 연결을 확인한 뒤 다시 시도해주세요.');
+    return;
+  }
+
+  setOcrLoading(true, 0);
+
+  try {
+    const { data } = await Tesseract.recognize(file, 'kor+eng', {
+      logger: m => {
+        if (m.status === 'recognizing text' && typeof m.progress === 'number') {
+          setOcrLoading(true, Math.round(m.progress * 100));
+        }
+      }
+    });
+    setOcrLoading(false);
+    openImportDialog(data.text || '');
+  } catch (err) {
+    setOcrLoading(false);
+    alertUser('이미지 인식에 실패했습니다.\n다른 이미지로 다시 시도해주세요.');
+  }
+}
+
+function confirmImport() {
+  const selected = importCandidates.filter(c => c.selected);
+  if (!selected.length) {
+    alertUser('등록할 항목을 선택해주세요.');
+    return;
+  }
+
+  let addedCount = 0;
+  const skipped = [];
+  const usedNames = new Set(people.map(p => p.name));
+
+  selected.forEach(c => {
+    const name = String(c.name || '').trim();
+    const handicap = Number(c.handicap);
+
+    if (!name) { skipped.push('(이름 미입력)'); return; }
+    if (!Number.isFinite(handicap)) { skipped.push(`${name} (핸디 미입력)`); return; }
+    if (usedNames.has(name)) { skipped.push(`${name} (중복)`); return; }
+
+    people.push({ name, left: !!c.left, handicap });
+    participantDB = normalizePeople([...participantDB, { name, left: !!c.left, handicap }]);
+    usedNames.add(name);
+    addedCount++;
+  });
+
+  saveCurrent();
+  saveDatabaseLocal();
+  render();
+  $('importDialog').close();
+
+  if (addedCount) toast(`${addedCount}명을 참석자로 등록했습니다.`);
+  if (skipped.length) {
+    alertUser(`다음 ${skipped.length}건은 등록되지 않았습니다:\n\n${skipped.join('\n')}`);
+  }
+}
+
+// =========================================================
 // 이벤트 바인딩
 // =========================================================
 
@@ -693,6 +881,20 @@ $('personHandicapBtn').addEventListener('click', () => {
   $('handicapDialog').showModal();
 });
 $('closeHandicapDialog').addEventListener('click', () => $('handicapDialog').close());
+
+$('importImageBtn').addEventListener('click', () => $('importImageInput').click());
+$('importImageInput').addEventListener('change', e => {
+  const file = e.target.files && e.target.files[0];
+  handleImportImage(file);
+  e.target.value = '';
+});
+$('closeImportDialog').addEventListener('click', () => $('importDialog').close());
+$('importCancelBtn').addEventListener('click', () => $('importDialog').close());
+$('importConfirmBtn').addEventListener('click', confirmImport);
+$('importSelectAll').addEventListener('change', e => {
+  importCandidates.forEach(c => c.selected = e.target.checked);
+  renderImportList();
+});
 
 $('helpBtn').addEventListener('click', () => $('helpDialog').showModal());
 $('closeHelp').addEventListener('click', () => $('helpDialog').close());
