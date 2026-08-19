@@ -86,6 +86,17 @@ function handiTag(h) {
   return `<small class="handi-tag">HDCP ${h}</small>`;
 }
 
+// -- 핸디 드롭다운 옵션(-25 ~ 40) 채우기 --
+function initHandicapSelect() {
+  const select = $('personHandicapInput');
+  for (let h = -25; h <= 40; h++) {
+    const opt = document.createElement('option');
+    opt.value = h;
+    opt.textContent = h;
+    select.appendChild(opt);
+  }
+}
+
 function render() {
   rooms = normalizeRooms(rooms);
   people = normalizePeople(people);
@@ -169,18 +180,13 @@ function addPerson(name, handicapRaw) {
 
   const handicapStr = String(handicapRaw ?? '').trim();
   if (handicapStr === '') {
-    alertUser('핸디를 입력해주세요.');
+    alertUser('핸디를 선택해주세요.');
     $('personHandicapInput').focus();
     return false;
   }
   const handicap = Number(handicapStr);
   if (!Number.isFinite(handicap)) {
-    alertUser('핸디는 숫자로 입력해주세요.');
-    $('personHandicapInput').focus();
-    return false;
-  }
-  if (handicap < 0 || handicap > 54) {
-    alertUser('핸디는 0~54 사이로 입력해주세요.');
+    alertUser('핸디 값이 올바르지 않습니다. 다시 선택해주세요.');
     $('personHandicapInput').focus();
     return false;
   }
@@ -196,10 +202,10 @@ function addPerson(name, handicapRaw) {
 
 function addPersonFromInput() {
   const name = $('personInput').value.trim();
-  const handicap = $('personHandicapInput').value.trim();
+  const handicap = $('personHandicapInput').value;
   if (addPerson(name, handicap)) {
     $('personInput').value = '';
-    $('personHandicapInput').value = '';
+    $('personHandicapInput').selectedIndex = 0;
     $('leftPersonToggle').checked = false;
     $('personInput').focus();
   }
@@ -456,7 +462,7 @@ function draw() {
 }
 
 // =========================================================
-// 핸디 균형 배정 (참석자 등록 시 입력한 핸디를 그대로 사용)
+// 핸디 균형 배정 (참석자 등록 시 선택한 핸디를 그대로 사용)
 // =========================================================
 
 function assignByHandicap(entries, roomCount) {
@@ -601,7 +607,10 @@ $('drawHandicapBtn').addEventListener('click', drawHandicap);
 $('roomInput').addEventListener('input', e => { e.target.value = e.target.value.replace(/\D/g, ''); });
 $('roomInput').addEventListener('keydown', e => { if (e.key === 'Enter') addRoom(); });
 $('personInput').addEventListener('keydown', e => { if (e.key === 'Enter') $('personHandicapInput').focus(); });
-$('personHandicapInput').addEventListener('keydown', e => { if (e.key === 'Enter') addPersonFromInput(); });
+
+$('personHandicapInput').addEventListener('change', () => {
+  if ($('personInput').value.trim()) addPersonFromInput();
+});
 
 $('helpBtn').addEventListener('click', () => $('helpDialog').showModal());
 $('closeHelp').addEventListener('click', () => $('helpDialog').close());
@@ -625,4 +634,5 @@ $('resetBtn').addEventListener('click', () => {
 drawRandomBtnHTML = $('drawRandomBtn').innerHTML;
 drawHandicapBtnHTML = $('drawHandicapBtn').innerHTML;
 
+initHandicapSelect();
 render();
