@@ -676,8 +676,14 @@ function drawHandicap() {
 let importCandidates = [];
 let importSeq = 0;
 
+function normalizeDashChars(text) {
+  // OCR이 마이너스 기호를 다양한 대시류 문자(en dash, em dash, minus sign 등)로
+  // 잘못 인식하는 경우가 있어, 모두 표준 하이픈(-)으로 통일시킨다.
+  return String(text || '').replace(/[–—−‐‑]/g, '-');
+}
+
 function parseOcrTextToCandidates(rawText) {
-  const lines = String(rawText || '')
+  const lines = normalizeDashChars(rawText)
     .split('\n')
     .map(l => l.trim())
     .filter(l => l.length >= 2);
@@ -691,7 +697,10 @@ function parseOcrTextToCandidates(rawText) {
     const left = /좌타/.test(line);
 
     let handicap = null;
-    const hMatch = line.match(/g\s*(-?\d+(?:\.\d+)?)/i);
+    // "G" 뒤에 공백/콜론/괄호/점 등 숫자·하이픈이 아닌 문자가 최대 4개까지
+    // 끼어 있어도, 그 뒤에 오는 숫자(부호 포함)를 핸디 값으로 그대로 인식한다.
+    // 예) G-3 -> -3 / G: -3 -> -3 / G(3) -> 3 / G.15 -> 15
+    const hMatch = line.match(/g[^0-9-]{0,4}(-?\d+(?:\.\d+)?)/i);
     if (hMatch) {
       const n = Number(hMatch[1]);
       if (Number.isFinite(n)) handicap = n;
