@@ -1,5 +1,5 @@
 /* =========================================================
-   TEAM PINHIGH GOLF CLUB - style.css (전체 통합본, v9)
+   TEAM PINHIGH GOLF CLUB - style.css (전체 통합본, v10)
    ========================================================= */
 
 * {
@@ -170,18 +170,45 @@ a {
 
 /* 참석자 등록 전용 입력 행 (이름 + 핸디 + 버튼) */
 .attendee-input-row {
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 .attendee-input-row #personInput {
-  flex: 1 1 140px;
-}
-.attendee-input-row #personHandicapInput {
-  flex: 0 0 78px;
-  text-align: center;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 .attendee-input-row .add-btn {
-  flex: 0 0 64px;
-  padding: 0 10px;
+  flex: 0 0 60px;
+  padding: 0 8px;
+}
+
+/* 핸디 선택 드롭다운 */
+.handicap-select {
+  flex: 0 0 76px;
+  padding: 11px 20px 11px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background-color: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-size: 14px;
+  text-align: center;
+  text-align-last: center;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, #ff2e93 50%),
+                     linear-gradient(135deg, #ff2e93 50%, transparent 50%);
+  background-position: calc(100% - 15px) center, calc(100% - 10px) center;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+.handicap-select:focus {
+  outline: none;
+  border-color: #ff2e93;
+  box-shadow: 0 0 0 3px rgba(255, 46, 147, 0.18);
+}
+.handicap-select option {
+  color: #18072d;
+  background: #fff;
 }
 
 /* 좌타 토글 스위치 */
@@ -382,25 +409,28 @@ a {
 }
 
 /* =========================================================
-   방배정 버튼 (랜덤 / 핸디 균형)
+   방배정 버튼 (랜덤 / 핸디 균형) - 항상 가로 배치
    ========================================================= */
 .draw-btn-group {
   display: flex;
-  gap: 10px;
+  flex-wrap: nowrap;
+  gap: 8px;
   margin-bottom: 10px;
 }
 .draw-btn {
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0;
   border: none;
   border-radius: 14px;
-  padding: 15px 8px;
-  font-size: 14.5px;
+  padding: 14px 6px;
+  font-size: 13.5px;
   font-weight: 800;
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
+  white-space: nowrap;
   transition: transform 0.15s ease;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
 }
@@ -434,9 +464,10 @@ a {
   to   { transform: rotate(360deg); }
 }
 
-@media (max-width: 380px) {
-  .draw-btn-group {
-    flex-direction: column;
+@media (max-width: 340px) {
+  .draw-btn {
+    font-size: 12px;
+    padding: 13px 4px;
   }
 }
 
