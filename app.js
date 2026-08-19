@@ -78,7 +78,7 @@ function esc(s) {
   return String(s).replace(/[&<>'"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' }[c]));
 }
 
-// 좌타 배지: 방/참석자/DB/배정결과 어디서든 동일한 마크업(<small class="left-tag">좌타</small>)을 사용합니다.
+// 좌타 배지: 방/참석자/DB/배정결과 어디서든 동일한 마크업을 사용합니다.
 function leftTag(isLeft) {
   return isLeft ? '<small class="left-tag">좌타</small>' : '';
 }
@@ -174,7 +174,7 @@ function addPersonFromInput() {
   const name = $('personInput').value.trim();
   if (addPerson(name)) {
     $('personInput').value = '';
-    $('leftPersonToggle').checked = false; // 등록 후 좌타 토글을 항상 초기화합니다.
+    $('leftPersonToggle').checked = false;
     $('personInput').focus();
   }
 }
@@ -244,7 +244,6 @@ function buildAssignments() {
   const leftPeople = shuffle(people.filter(p => p.left));
   const rightPeople = shuffle(people.filter(p => !p.left));
 
-  // 좌타방에는 좌타 참석자를 먼저 배정합니다.
   const leftRoomGroups = shuffle(groups.filter(g => g.room.left));
   let li = 0;
   leftRoomGroups.forEach(group => {
@@ -253,7 +252,6 @@ function buildAssignments() {
     }
   });
 
-  // 좌타방에 다 배정되지 못한 좌타 참석자는 나머지 인원과 함께 무작위로 채웁니다.
   const remaining = shuffle([...rightPeople, ...leftPeople.slice(li)]);
   let cursor = 0;
   groups.forEach(group => {
@@ -283,23 +281,47 @@ function validateForDraw() {
   return true;
 }
 
-function draw() {
-  if (!validateForDraw()) return;
-  const groups = buildAssignments();
-  if (!groups.every(g => g.people.length >= 2 && g.people.length <= 3)) {
-    alertUser('방배정 조건을 만족하는 결과를 만들지 못했습니다. 다시 시도해주세요.');
-    return;
-  }
+// ===== 여기서부터 두근두근 셔플 애니메이션 관련 =====
 
-  // 그룹 안의 실제 room 객체(a.room, b.room)를 비교해야 숫자 정렬이 정상 동작합니다.
-  groups.sort((a, b) => compareRooms(a.room, b.room));
+let isDrawing = false;
 
+// 실제 결과와 무관한 '가짜' 셔플 미리보기용 조합을 매번 새로 만듭니다.
+function shuffleGroupsPreview() {
+  const shuffledPeople = shuffle(people);
+  const shuffledRoomsPreview = shuffle(rooms);
+  const sizes = getGroupSizes(shuffledRoomsPreview.length, shuffledPeople.length);
+  let idx = 0;
+  return shuffledRoomsPreview.map((room, i) => {
+    const count = sizes[i] || 2;
+    const members = shuffledPeople.slice(idx, idx + count);
+    idx += count;
+    return { room, people: members };
+  });
+}
+
+function renderPreview(groups) {
+  $('result').innerHTML = `
+    <div class="result-card shuffling">
+      <div class="result-head"><strong>🎲 방배정 중...</strong><span>두근두근...</span></div>
+      <div class="assignment">
+        ${groups.map(g => `
+          <div class="room-result preview">
+            <div class="room-result-title"><b>🏌️ ${esc(g.room.name)}번 방</b></div>
+            <div class="result-people">${g.people.map(p => `<span class="person shuffle-chip">${esc(p.name)}</span>`).join('')}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderFinalResult(groups) {
   $('result').innerHTML = `
     <div class="result-card">
       <div class="result-head"><strong>🎉 방배정 완료</strong><span>${people.length}명 · ${groups.length}개 방</span></div>
       <div class="assignment">
-        ${groups.map(g => `
-          <div class="room-result">
+        ${groups.map((g, i) => `
+          <div class="room-result reveal-item" style="animation-delay: ${i * 0.18}s">
             <div class="room-result-title"><b>🏌️ ${esc(g.room.name)}번 방</b><span>${g.people.length}명${g.room.left ? ' · 좌타방' : ''}</span></div>
             <div class="result-people">${g.people.map(p => `
               <span class="person${p.left ? ' left' : ''}">${esc(p.name)}${leftTag(p.left)}</span>
@@ -309,7 +331,47 @@ function draw() {
       </div>
     </div>
   `;
+}
+
+function draw() {
+  if (isDrawing) return;
+  if (!validateForDraw()) return;
+
+  // 실제 배정은 애니메이션 시작 전에 미리 확정해둡니다(화면에는 아직 보여주지 않음).
+  const groups = buildAssignments();
+  if (!groups.every(g => g.people.length >= 2 && g.people.length <= 3)) {
+    alertUser('방배정 조건을 만족하는 결과를 만들지 못했습니다. 다시 시도해주세요.');
+    return;
+  }
+  groups.sort((a, b) => compareRooms(a.room, b.room));
+
+  isDrawing = true;
+  const btn = $('drawBtn');
+  const originalHTML = btn.innerHTML;
+  btn.disabled = true;
+  btn.classList.add('drawing');
+  btn.innerHTML = '<span class="dice-spin">🎲</span> 방배정 중...';
+
   $('result').scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+  const shuffleDuration = 1600; // 셔플 미리보기 지속 시간(ms) - 값을 늘리면 더 오래 두근거립니다.
+  const shuffleInterval = 100;  // 미리보기 갱신 주기(ms)
+  let elapsed = 0;
+
+  renderPreview(shuffleGroupsPreview());
+  const timer = setInterval(() => {
+    renderPreview(shuffleGroupsPreview());
+    elapsed += shuffleInterval;
+    if (elapsed >= shuffleDuration) {
+      clearInterval(timer);
+      renderFinalResult(groups);
+      btn.disabled = false;
+      btn.classList.remove('drawing');
+      btn.innerHTML = originalHTML;
+      isDrawing = false;
+      $('result').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, shuffleInterval);
 }
 
 $('addRoomBtn').addEventListener('click', addRoom);
