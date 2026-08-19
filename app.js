@@ -478,34 +478,51 @@ function draw() {
 }
 
 // =========================================================
-// 핸디 균형 배정 (참석자 등록 시 선택한 핸디를 그대로 사용)
+// 핸디 균형 배정 (좌타 참석자는 좌타방에 우선 배치, 나머지는 핸디 균형 그리디)
 // =========================================================
 
-function assignByHandicap(entries, roomCount) {
-  const n = entries.length;
-  const base = Math.floor(n / roomCount);
-  const remainder = n % roomCount;
+function assignByHandicap(entries, roomList) {
+  const groups = shuffle(roomList.map(r => ({ ...r }))).map(room => ({ room, people: [], sum: 0 }));
 
-  let capacities = Array.from({ length: roomCount }, (_, i) => base + (i < remainder ? 1 : 0));
-  capacities = shuffle(capacities);
+  const leftRoomGroups = groups.filter(g => g.room.left);
+  const hasLeftRoom = leftRoomGroups.length > 0;
 
-  const groups = capacities.map(cap => ({ capacity: cap, people: [], sum: 0 }));
+  // 1단계: 좌타자를 좌타방에 우선 배치 (핸디 낮은 상위 랭커부터, 좌타방들 사이는 핸디 합이 적은 방부터 채움)
+  const leftPeopleSorted = shuffle(entries.filter(p => p.left)).sort((a, b) => a.handicap - b.handicap);
+  const placedNames = new Set();
 
-  const sorted = entries.slice().sort((a, b) => b.handicap - a.handicap);
+  if (hasLeftRoom) {
+    leftPeopleSorted.forEach(person => {
+      leftRoomGroups.sort((a, b) => a.sum - b.sum || a.people.length - b.people.length);
+      const target = leftRoomGroups[0];
+      target.people.push(person);
+      target.sum += person.handicap;
+      placedNames.add(person.name);
+    });
+  }
 
-  sorted.forEach(person => {
-    let target = null;
-    for (const g of groups) {
-      if (g.people.length >= g.capacity) continue;
-      if (!target || g.sum < target.sum) target = g;
+  // 2단계: 좌타방이 없어 배치되지 못한 좌타자 + 모든 우타자를
+  // 전체 방에 걸쳐 평균 핸디가 균등해지도록 그리디 배정
+  const remaining = shuffle(entries.filter(p => !placedNames.has(p.name)))
+    .sort((a, b) => b.handicap - a.handicap);
+
+  remaining.forEach(person => {
+    let target = groups[0];
+    let targetAvg = target.people.length ? target.sum / target.people.length : -Infinity;
+    for (let i = 1; i < groups.length; i++) {
+      const g = groups[i];
+      const gAvg = g.people.length ? g.sum / g.people.length : -Infinity;
+      if (gAvg < targetAvg) {
+        target = g;
+        targetAvg = gAvg;
+      }
     }
     target.people.push(person);
     target.sum += person.handicap;
   });
 
-  const shuffledRoomRefs = shuffle(rooms.slice(0, roomCount));
-  const result = groups.map((g, i) => ({
-    room: shuffledRoomRefs[i],
+  const result = groups.map(g => ({
+    room: g.room,
     people: g.people,
     sum: g.sum,
     avg: g.people.length ? g.sum / g.people.length : 0
@@ -526,7 +543,7 @@ function renderHandicapLoading() {
   `;
 }
 
-function renderHandicapResult(groups) {
+function renderHandicapResult(groups, warnNoLeftRoom) {
   const allPeople = groups.flatMap(g => g.people);
   const totalSum = allPeople.reduce((s, p) => s + p.handicap, 0);
   const totalAvg = allPeople.length ? totalSum / allPeople.length : 0;
@@ -538,6 +555,8 @@ function renderHandicapResult(groups) {
         <strong>🎉 핸디 균형 배정 완료</strong>
         <span>${allPeople.length}명 · ${groups.length}개 방</span>
       </div>
+
+      ${warnNoLeftRoom ? `<div class="result-warning">⚠️ 좌타 참석자가 있지만 좌타방이 등록되어 있지 않아, 좌타 여부와 관계없이 핸디 기준으로만 배정되었습니다.</div>` : ''}
 
       <div class="handicap-overview">
         <div class="overview-item"><span>전체 참가자</span><b>${allPeople.length}명</b></div>
@@ -554,7 +573,7 @@ function renderHandicapResult(groups) {
           return `
             <div class="room-result reveal-item-done handicap-room" style="animation-delay: ${i * 0.15}s">
               <div class="room-result-title">
-                <b>🏌️ ${esc(g.room.name)}번 방</b>
+                <b>🏌️ ${esc(g.room.name)}번 방${g.room.left ? ' · 좌타방' : ''}</b>
                 <span>${g.people.length}명</span>
               </div>
               <div class="result-people">
@@ -598,13 +617,15 @@ function drawHandicap() {
   setButtonsBusy('<span class="calc-spin">⚖️</span> 계산 중...', 'handicap');
 
   const entries = people.map(p => ({ name: p.name, handicap: p.handicap, left: p.left }));
-  const groups = assignByHandicap(entries, rooms.length);
+  const hasLeftRoom = rooms.some(r => r.left);
+  const hasLeftPeople = people.some(p => p.left);
+  const groups = assignByHandicap(entries, rooms);
 
   renderHandicapLoading();
   $('result').scrollIntoView({ behavior: 'smooth', block: 'center' });
 
   setTimeout(() => {
-    renderHandicapResult(groups);
+    renderHandicapResult(groups, hasLeftPeople && !hasLeftRoom);
     resetButtons();
     isBusy = false;
     $('result').scrollIntoView({ behavior: 'smooth', block: 'center' });
