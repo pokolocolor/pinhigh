@@ -1,5 +1,5 @@
 /* =========================================================
-   TEAM PINHIGH GOLF CLUB - style.css (전체 통합본, v14)
+   TEAM PINHIGH GOLF CLUB - style.css (전체 통합본, v15)
    ========================================================= */
 
 * {
@@ -22,7 +22,6 @@ html, body {
   touch-action: manipulation;
 }
 
-/* 더블탭/핀치 확대 방지 (iOS Safari 보조 처리) */
 body {
   overscroll-behavior-y: contain;
 }
@@ -37,8 +36,6 @@ a {
   color: inherit;
 }
 
-/* iOS는 입력 요소 font-size가 16px 미만이면 포커스 시 자동 확대되므로
-   모든 입력 요소의 실제 렌더링 폰트 크기를 16px 이상으로 유지함 */
 input, select, textarea, button {
   font-size: 16px;
 }
@@ -199,7 +196,7 @@ input, select, textarea, button {
   padding: 0 8px;
 }
 
-/* 핸디 선택 버튼 (드롭다운 대신 팝업 다이얼로그를 여는 버튼) */
+/* 핸디 선택 버튼 */
 .handicap-picker-btn {
   flex: 0 0 76px;
   padding: 0 8px;
@@ -261,6 +258,30 @@ input, select, textarea, button {
 }
 .toggle-row input:checked + .switch::before {
   transform: translateX(16px);
+}
+
+/* =========================================================
+   이미지 캡처 일괄 등록 버튼
+   ========================================================= */
+.ocr-import-row {
+  margin: 2px 0 12px;
+}
+.ocr-import-btn {
+  width: 100%;
+  border: 1.5px dashed rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.04);
+  color: #cfc7e6;
+  border-radius: 12px;
+  padding: 11px 10px;
+  font-size: 13.5px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.ocr-import-btn:active {
+  transform: scale(0.98);
 }
 
 /* 비어있음 안내 */
@@ -807,7 +828,7 @@ dialog#helpDialog::backdrop {
 }
 
 /* =========================================================
-   핸디 선택 다이얼로그 (커스텀 팝업 그리드)
+   핸디 선택 다이얼로그
    ========================================================= */
 dialog#handicapDialog {
   border: none;
@@ -857,6 +878,181 @@ dialog#handicapDialog::backdrop {
 }
 .handicap-grid-btn:active {
   transform: scale(0.95);
+}
+
+/* =========================================================
+   OCR 로딩 다이얼로그
+   ========================================================= */
+dialog#ocrLoadingDialog {
+  border: none;
+  border-radius: 16px;
+  padding: 0;
+  max-width: 300px;
+  width: 82vw;
+  background: #241238;
+  color: #f2edff;
+}
+dialog#ocrLoadingDialog::backdrop {
+  background: rgba(0, 0, 0, 0.6);
+}
+.ocr-loading-inner {
+  text-align: center;
+  padding: 28px 20px;
+}
+.ocr-spinner {
+  width: 36px;
+  height: 36px;
+  margin: 0 auto 14px;
+  border: 3px solid rgba(255, 255, 255, 0.15);
+  border-top-color: #ff2e93;
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+.ocr-loading-inner p {
+  margin: 0 0 4px;
+  font-size: 13.5px;
+  color: #fff;
+  font-weight: 600;
+}
+.ocr-loading-sub {
+  font-size: 11.5px !important;
+  color: #a89ecb !important;
+  font-weight: 400 !important;
+}
+
+/* =========================================================
+   인식 결과 확인 · 수정 다이얼로그
+   ========================================================= */
+dialog#importDialog {
+  border: none;
+  border-radius: 16px;
+  padding: 0;
+  max-width: 440px;
+  width: 92vw;
+  background: #241238;
+  color: #f2edff;
+}
+dialog#importDialog::backdrop {
+  background: rgba(0, 0, 0, 0.6);
+}
+.import-dialog-inner {
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
+  padding: 22px 18px 18px;
+}
+.import-guide {
+  font-size: 12.5px;
+  color: #a89ecb;
+  line-height: 1.5;
+  margin: 0 0 12px;
+}
+.import-select-all-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: #d8d1f0;
+}
+.import-select-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+.import-list {
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-right: 2px;
+}
+.import-empty {
+  font-size: 13px;
+  color: #8f85ad;
+  text-align: center;
+  padding: 16px 0;
+}
+.import-row {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 10px;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+.import-check {
+  padding-top: 10px;
+}
+.import-fields {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.import-name-input {
+  flex: 1 1 100px;
+  min-width: 80px;
+  padding: 7px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+.import-handi-input {
+  width: 68px;
+  padding: 7px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+.import-left-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+  color: #d8d1f0;
+  white-space: nowrap;
+}
+.import-raw {
+  flex-basis: 100%;
+  font-size: 10.5px;
+  color: #7c7096;
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.import-actions {
+  display: flex;
+  gap: 8px;
+}
+.import-cancel-btn,
+.import-confirm-btn {
+  flex: 1;
+  border: none;
+  border-radius: 10px;
+  padding: 12px;
+  font-weight: 700;
+  font-size: 13.5px;
+}
+.import-cancel-btn {
+  background: rgba(255, 255, 255, 0.08);
+  color: #d8d1f0;
+}
+.import-confirm-btn {
+  background: linear-gradient(135deg, #ff2e93, #a24bff);
+  color: #fff;
+}
+.import-cancel-btn:active,
+.import-confirm-btn:active {
+  transform: scale(0.97);
 }
 
 /* =========================================================
