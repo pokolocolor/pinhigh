@@ -78,7 +78,6 @@ function esc(s) {
   return String(s).replace(/[&<>'"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' }[c]));
 }
 
-// 좌타 배지: 방/참석자/DB/배정결과 어디서든 동일한 마크업을 사용합니다.
 function leftTag(isLeft) {
   return isLeft ? '<small class="left-tag">좌타</small>' : '';
 }
@@ -281,11 +280,8 @@ function validateForDraw() {
   return true;
 }
 
-// ===== 여기서부터 두근두근 셔플 애니메이션 관련 =====
-
 let isDrawing = false;
 
-// 실제 결과와 무관한 '가짜' 셔플 미리보기용 조합을 매번 새로 만듭니다.
 function shuffleGroupsPreview() {
   const shuffledPeople = shuffle(people);
   const shuffledRoomsPreview = shuffle(rooms);
@@ -337,7 +333,6 @@ function draw() {
   if (isDrawing) return;
   if (!validateForDraw()) return;
 
-  // 실제 배정은 애니메이션 시작 전에 미리 확정해둡니다(화면에는 아직 보여주지 않음).
   const groups = buildAssignments();
   if (!groups.every(g => g.people.length >= 2 && g.people.length <= 3)) {
     alertUser('방배정 조건을 만족하는 결과를 만들지 못했습니다. 다시 시도해주세요.');
@@ -354,8 +349,8 @@ function draw() {
 
   $('result').scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-  const shuffleDuration = 1600; // 셔플 미리보기 지속 시간(ms) - 값을 늘리면 더 오래 두근거립니다.
-  const shuffleInterval = 100;  // 미리보기 갱신 주기(ms)
+  const shuffleDuration = 1600;
+  const shuffleInterval = 100;
   let elapsed = 0;
 
   renderPreview(shuffleGroupsPreview());
