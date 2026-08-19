@@ -1,9 +1,13 @@
 /* =========================================================
-   TEAM PINHIGH GOLF CLUB - style.css (전체 통합본, v10)
+   TEAM PINHIGH GOLF CLUB - style.css (전체 통합본, v12)
    ========================================================= */
 
 * {
   box-sizing: border-box;
+}
+
+html {
+  touch-action: manipulation;
 }
 
 html, body {
@@ -15,15 +19,28 @@ html, body {
   font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo",
     "Noto Sans KR", "Malgun Gothic", sans-serif;
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* 더블탭/핀치 확대 방지 (iOS Safari 보조 처리) */
+body {
+  overscroll-behavior-y: contain;
 }
 
 button {
   font-family: inherit;
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 a {
   color: inherit;
+}
+
+/* iOS는 입력 요소 font-size가 16px 미만이면 포커스 시 자동 확대되므로
+   모든 입력 요소의 실제 렌더링 폰트 크기를 16px 이상으로 유지함 */
+input, select, textarea, button {
+  font-size: 16px;
 }
 
 /* =========================================================
@@ -40,6 +57,9 @@ a {
   width: 100%;
   height: auto;
   object-fit: cover;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 /* =========================================================
@@ -143,7 +163,6 @@ a {
   border: 1px solid rgba(255, 255, 255, 0.18);
   background: rgba(255, 255, 255, 0.06);
   color: #fff;
-  font-size: 15px;
   min-width: 0;
 }
 .input-row input::placeholder {
@@ -159,7 +178,6 @@ a {
   background: linear-gradient(135deg, #ff2e93, #ff6bb0);
   color: #fff;
   font-weight: 700;
-  font-size: 14px;
   border-radius: 10px;
   padding: 0 18px;
   flex-shrink: 0;
@@ -168,7 +186,7 @@ a {
   transform: scale(0.97);
 }
 
-/* 참석자 등록 전용 입력 행 (이름 + 핸디 + 버튼) */
+/* 참석자 등록 전용 입력 행 (이름 + 핸디 버튼 + 등록 버튼) */
 .attendee-input-row {
   flex-wrap: nowrap;
 }
@@ -181,34 +199,24 @@ a {
   padding: 0 8px;
 }
 
-/* 핸디 선택 드롭다운 */
-.handicap-select {
+/* 핸디 선택 버튼 (드롭다운 대신 팝업 다이얼로그를 여는 버튼) */
+.handicap-picker-btn {
   flex: 0 0 76px;
-  padding: 11px 20px 11px 8px;
+  padding: 0 8px;
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.18);
-  background-color: rgba(255, 255, 255, 0.06);
-  color: #fff;
-  font-size: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #cfc7e6;
+  font-weight: 600;
   text-align: center;
-  text-align-last: center;
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  background-image: linear-gradient(45deg, transparent 50%, #ff2e93 50%),
-                     linear-gradient(135deg, #ff2e93 50%, transparent 50%);
-  background-position: calc(100% - 15px) center, calc(100% - 10px) center;
-  background-size: 5px 5px, 5px 5px;
-  background-repeat: no-repeat;
 }
-.handicap-select:focus {
-  outline: none;
+.handicap-picker-btn.selected {
   border-color: #ff2e93;
-  box-shadow: 0 0 0 3px rgba(255, 46, 147, 0.18);
+  color: #fff;
+  background: rgba(255, 46, 147, 0.15);
 }
-.handicap-select option {
-  color: #18072d;
-  background: #fff;
+.handicap-picker-btn:active {
+  transform: scale(0.97);
 }
 
 /* 좌타 토글 스위치 */
@@ -782,6 +790,59 @@ dialog#helpDialog::backdrop {
 }
 .dialog-inner .close:hover {
   background: #ff2e93;
+}
+
+/* =========================================================
+   핸디 선택 다이얼로그 (커스텀 팝업 그리드)
+   ========================================================= */
+dialog#handicapDialog {
+  border: none;
+  border-radius: 16px;
+  padding: 0;
+  max-width: 340px;
+  width: 88vw;
+  background: #241238;
+  color: #f2edff;
+}
+dialog#handicapDialog::backdrop {
+  background: rgba(0, 0, 0, 0.55);
+}
+.handicap-dialog-inner {
+  position: relative;
+  padding: 22px 20px 20px;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+}
+.handicap-dialog-inner h3 {
+  margin: 0 0 12px;
+  font-size: 16px;
+  color: #fff;
+}
+.handicap-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  overflow-y: auto;
+  padding-right: 2px;
+  max-height: 52vh;
+}
+.handicap-grid-btn {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  border-radius: 8px;
+  padding: 10px 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.handicap-grid-btn.active {
+  border-color: #ff2e93;
+  background: rgba(255, 46, 147, 0.25);
+  color: #fff;
+}
+.handicap-grid-btn:active {
+  transform: scale(0.95);
 }
 
 /* =========================================================
