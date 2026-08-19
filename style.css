@@ -1,10 +1,371 @@
-/* =========================================
-   배정 방식 선택 UI
-   ========================================= */
+/* =========================================================
+   TEAM PINHIGH GOLF CLUB - style.css (전체 통합본)
+   ========================================================= */
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  background: #18072d;
+  color: #f2edff;
+  font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo",
+    "Noto Sans KR", "Malgun Gothic", sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+}
+
+/* =========================================================
+   상단 풀블리드 배너
+   ========================================================= */
+.hero-banner {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  line-height: 0;
+}
+.hero-banner img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+}
+
+/* =========================================================
+   전체 레이아웃
+   ========================================================= */
+.app-shell {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 20px 16px 40px;
+}
+
+/* =========================================================
+   히어로(상단 타이틀) 영역
+   ========================================================= */
+.hero {
+  text-align: center;
+  margin-bottom: 18px;
+}
+.hero h2 {
+  font-size: 22px;
+  margin: 6px 0 4px;
+  color: #fff;
+}
+.hero h2 em {
+  color: #ff2e93;
+  font-style: normal;
+}
+.hero p {
+  margin: 0;
+  font-size: 13px;
+  color: #b6a9d9;
+}
+.hero-actions {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.hero-btn {
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.hero-btn:hover {
+  border-color: #ff2e93;
+  color: #ff2e93;
+}
+
+/* =========================================================
+   공용 카드
+   ========================================================= */
+.card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+.card-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+  font-size: 15px;
+}
+.card-title strong {
+  color: #fff;
+}
+.title-icon {
+  font-size: 16px;
+}
+.card-title .count {
+  margin-left: auto;
+  font-size: 12px;
+  color: #ff2e93;
+  background: rgba(255, 46, 147, 0.12);
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+.section-hint {
+  font-size: 12.5px;
+  color: #a89ecb;
+  margin: -4px 0 12px;
+}
+
+/* =========================================================
+   입력 행 (방/참석자 등록 공용)
+   ========================================================= */
+.input-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.input-row input {
+  flex: 1;
+  padding: 11px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-size: 15px;
+}
+.input-row input::placeholder {
+  color: #8f85ad;
+}
+.input-row input:focus {
+  outline: none;
+  border-color: #ff2e93;
+  box-shadow: 0 0 0 3px rgba(255, 46, 147, 0.18);
+}
+.add-btn {
+  border: none;
+  background: linear-gradient(135deg, #ff2e93, #ff6bb0);
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  border-radius: 10px;
+  padding: 0 18px;
+}
+.add-btn:active {
+  transform: scale(0.97);
+}
+
+/* 좌타 토글 스위치 */
+.toggle-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #cfc7e6;
+  margin-bottom: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+.toggle-row input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.switch {
+  position: relative;
+  width: 38px;
+  height: 22px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.15);
+  transition: background 0.2s ease;
+  flex-shrink: 0;
+}
+.switch::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s ease;
+}
+.toggle-row input:checked + .switch {
+  background: #ff2e93;
+}
+.toggle-row input:checked + .switch::before {
+  transform: translateX(16px);
+}
+
+/* 비어있음 안내 */
+.empty {
+  font-size: 13px;
+  color: #8f85ad;
+  padding: 10px 0;
+  text-align: center;
+}
+
+/* =========================================================
+   칩(chip) - 방 목록 / 참석자 목록 공용
+   ========================================================= */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  padding: 6px 8px 6px 12px;
+  font-size: 13.5px;
+  color: #fff;
+}
+.chip button {
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: #d8d1f0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 13px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.chip button:hover {
+  background: #ff2e93;
+  color: #fff;
+}
+
+/* 좌타 뱃지 (공용) */
+.left-tag {
+  color: #ff2e93;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(255, 46, 147, 0.12);
+  border-radius: 6px;
+  padding: 1px 6px;
+  margin-left: 2px;
+}
+
+/* =========================================================
+   참가자 데이터베이스 카드
+   ========================================================= */
+.db-guide {
+  font-size: 12.5px;
+  color: #a89ecb;
+  line-height: 1.5;
+  margin: 0 0 12px;
+}
+.db-guide b {
+  color: #d8d1f0;
+}
+.database-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.db-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.db-person-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 9px 12px;
+  color: #fff;
+  font-size: 13.5px;
+}
+.db-person-btn .db-name {
+  font-weight: 600;
+}
+.db-person-btn .db-action {
+  margin-left: auto;
+  font-size: 12px;
+  color: #ff2e93;
+  font-weight: 700;
+}
+.db-person-btn.selected {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.db-person-btn.selected .db-action {
+  color: #8f85ad;
+}
+.db-delete {
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: #d8d1f0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.db-delete:hover {
+  background: #ff2e93;
+  color: #fff;
+}
+.db-empty {
+  font-size: 13px;
+  color: #8f85ad;
+  text-align: center;
+  padding: 10px 0;
+}
+.db-clear-btn {
+  width: 100%;
+  margin-top: 8px;
+  border: 1.5px solid rgba(255, 107, 107, 0.4);
+  background: rgba(255, 107, 107, 0.08);
+  color: #ff8a8a;
+  border-radius: 10px;
+  padding: 10px;
+  font-weight: 600;
+  font-size: 13.5px;
+}
+.db-clear-btn:hover {
+  background: rgba(255, 107, 107, 0.18);
+}
+
+/* =========================================================
+   배정 방식 선택 카드 (신규)
+   ========================================================= */
+.mode-select-card {
+  border-color: rgba(255, 46, 147, 0.25);
+}
 .mode-toggle {
   display: flex;
   gap: 10px;
-  margin: 12px 0;
+  margin: 4px 0 10px;
 }
 .mode-option {
   flex: 1;
@@ -17,6 +378,7 @@
   border-radius: 12px;
   cursor: pointer;
   font-weight: 600;
+  font-size: 13.5px;
   color: #cfc7e6;
   transition: all 0.2s ease;
 }
@@ -30,19 +392,19 @@
   box-shadow: 0 0 10px rgba(255, 46, 147, 0.25);
 }
 .mode-desc {
-  font-size: 13px;
+  font-size: 12.5px;
   color: #a89ecb;
-  margin-top: 4px;
+  margin: 0;
 }
 
-/* =========================================
-   핸디 참가자 입력 행
-   ========================================= */
+/* =========================================================
+   핸디 균형 배정 참가자 입력 (신규)
+   ========================================================= */
 .handicap-rows {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin: 12px 0;
+  margin-bottom: 12px;
 }
 .handicap-row {
   display: grid;
@@ -57,9 +419,14 @@
   background: rgba(255, 255, 255, 0.06);
   color: #fff;
   font-size: 14px;
+  width: 100%;
 }
 .handicap-row input::placeholder {
   color: #8f85ad;
+}
+.handicap-row input:focus {
+  outline: none;
+  border-color: #ff2e93;
 }
 .handicap-remove {
   width: 32px;
@@ -69,12 +436,14 @@
   background: rgba(255, 46, 147, 0.15);
   color: #ff2e93;
   font-size: 16px;
-  cursor: pointer;
+}
+.handicap-remove:hover {
+  background: #ff2e93;
+  color: #fff;
 }
 .handicap-actions {
   display: flex;
   gap: 8px;
-  margin-top: 10px;
 }
 .btn-secondary {
   flex: 1;
@@ -84,79 +453,48 @@
   background: transparent;
   color: #fff;
   font-weight: 600;
-  cursor: pointer;
+  font-size: 13.5px;
 }
 .btn-secondary:hover {
   border-color: #ff2e93;
   color: #ff2e93;
 }
 
-/* =========================================
-   핸디 균형 배정 결과 화면
-   ========================================= */
-.handicap-overview {
-  display: flex;
-  gap: 10px;
-  margin: 10px 0 16px;
-  flex-wrap: wrap;
-}
-.overview-item {
-  flex: 1;
-  min-width: 100px;
-  background: rgba(255, 255, 255, 0.06);
-  border-radius: 10px;
-  padding: 8px 10px;
-  text-align: center;
-}
-.overview-item span {
-  display: block;
-  font-size: 11px;
-  color: #a89ecb;
-}
-.overview-item b {
-  font-size: 15px;
+/* =========================================================
+   방배정 버튼 및 안내 문구
+   ========================================================= */
+.draw-btn {
+  width: 100%;
+  border: none;
+  border-radius: 14px;
+  padding: 16px;
+  font-size: 17px;
+  font-weight: 800;
   color: #fff;
-}
-
-.handicap-room .handi-badge {
-  color: #ffb703;
-  margin-left: 3px;
-  font-weight: 600;
-}
-
-.handicap-stats {
+  background: linear-gradient(135deg, #ff2e93, #a24bff, #4dd0e1);
+  background-size: 200% 200%;
+  box-shadow: 0 6px 20px rgba(255, 46, 147, 0.35);
   display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin-top: 8px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: transform 0.15s ease;
 }
-.stat-chip {
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  padding: 4px 8px;
-  font-size: 12px;
-  color: #d8d1f0;
+.draw-btn:active {
+  transform: scale(0.98);
 }
-.stat-chip b { color: #fff; }
-.stat-chip.dev-good { color: #7be495; }
-.stat-chip.dev-ok   { color: #ffd166; }
-.stat-chip.dev-warn { color: #ff6b6b; }
-
-.balance-bar-track {
-  margin-top: 8px;
-  height: 6px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.08);
-  overflow: hidden;
+.draw-btn:disabled {
+  opacity: 0.85;
+  cursor: not-allowed;
 }
-.balance-bar-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #4dd0e1, #ff2e93);
-  border-radius: 4px;
-  transition: width 0.4s ease;
+.draw-btn.drawing {
+  animation: btnPulse 1s ease-in-out infinite;
 }
-
-/* 계산 중 아이콘 회전 */
+@keyframes btnPulse {
+  0%, 100% { box-shadow: 0 6px 20px rgba(255, 46, 147, 0.35); }
+  50% { box-shadow: 0 6px 28px rgba(255, 46, 147, 0.6); }
+}
+.dice-spin,
 .calc-spin {
   display: inline-block;
   animation: spin 1s linear infinite;
@@ -165,3 +503,169 @@
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
 }
+
+.hint {
+  text-align: center;
+  font-size: 12.5px;
+  color: #a89ecb;
+  margin: 10px 4px 20px;
+  line-height: 1.5;
+}
+.hint b {
+  color: #d8d1f0;
+}
+
+/* =========================================================
+   결과 영역 공용 레이아웃
+   ========================================================= */
+.result {
+  display: block;
+}
+.result-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 16px;
+}
+.result-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.result-head strong {
+  font-size: 15px;
+  color: #fff;
+}
+.result-head span {
+  font-size: 12px;
+  color: #a89ecb;
+}
+.assignment {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.room-result {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.04);
+}
+.room-result-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+.room-result-title b {
+  color: #fff;
+}
+.room-result-title span {
+  font-size: 12px;
+  color: #ff2e93;
+  font-weight: 700;
+}
+.result-people {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.person {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 13px;
+  color: #fff;
+}
+.person.left {
+  border: 1px solid rgba(255, 46, 147, 0.4);
+}
+
+/* =========================================================
+   방별 순차 셔플 / 확정 / 대기 상태
+   ========================================================= */
+
+/* 대기 중인 방: 흐릿하고 반투명 */
+.room-result.pending-room {
+  opacity: 0.35;
+  filter: grayscale(0.5) blur(0.2px);
+  border: 1.5px dashed #6c5f92;
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: none;
+}
+.room-result.pending-room .room-result-title b {
+  color: #9a9aa8;
+}
+
+/* 셔플 중인 방: 다크 톤 그라디언트 배경 + 반짝이는 테두리 */
+.room-result.shuffling-room {
+  position: relative;
+  z-index: 0;
+  box-sizing: border-box;
+  border: none;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #2a1b45, #3a1f57, #201235, #33204d);
+  background-size: 300% 300%;
+  animation: bgFlow 2.4s ease-in-out infinite;
+  box-shadow: 0 0 18px rgba(255, 46, 147, 0.35);
+  overflow: hidden;
+  color: #fff;
+}
+.room-result.shuffling-room .room-result-title b,
+.room-result.shuffling-room .room-result-title span {
+  color: #ffffff;
+}
+@keyframes bgFlow {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.room-result.shuffling-room::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px;
+  background: linear-gradient(90deg, #ff2e93, #ffb703, #4dd0e1, #ff2e93);
+  background-size: 300% 100%;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: shimmerBorder 1.1s linear infinite;
+  pointer-events: none;
+}
+@keyframes shimmerBorder {
+  0%   { background-position: 0% 0; }
+  100% { background-position: 100% 0; }
+}
+
+.room-result.shuffling-room .person.shuffle-chip {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  animation: chipJitter 0.3s ease-in-out infinite alternate;
+}
+@keyframes chipJitter {
+  from { transform: translateY(0) scale(1); }
+  to   { transform: translateY(-1px) scale(1.03); }
+}
+
+/* 확정된 방: 도장 찍히는 효과 (추가될 때 한 번만 재생) */
+.room-result.reveal-item-done {
+  position: relative;
+  overflow: hidden;
+  animation: stampIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes stampIn {
+  0%   { transform: scale(1.5) rotate(-6deg); opacity: 0; }
+  60%  { transform: scale(0.96) rotate(1.5deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+.room-result.reveal-item-
