@@ -2,8 +2,8 @@ const $ = id => document.getElementById(id);
 
 const STORAGE = {
   rooms: 'pinhigh_rooms_v3',
-  people: 'pinhigh_people_v4',
-  database: 'pinhigh_participant_database_v4'
+  people: 'pinhigh_people_v5',
+  database: 'pinhigh_participant_database_v5'
 };
 
 let participantDB = normalizePeople(readJSON(STORAGE.database));
@@ -20,12 +20,12 @@ function readJSON(key, fallback = []) {
 function normalizePeople(list) {
   const map = new Map();
   (Array.isArray(list) ? list : []).forEach(p => {
-    if (typeof p === 'string') {
-      const name = p.trim();
-      if (name) map.set(name, { name, left: false });
-    } else if (p && typeof p === 'object') {
+    if (p && typeof p === 'object') {
       const name = String(p.name || '').trim();
-      if (name) map.set(name, { name, left: !!p.left });
+      const handicap = Number(p.handicap);
+      if (name && Number.isFinite(handicap)) {
+        map.set(name, { name, left: !!p.left, handicap });
+      }
     }
   });
   return [...map.values()].sort((a, b) => a.name.localeCompare(b.name, 'ko'));
@@ -82,6 +82,10 @@ function leftTag(isLeft) {
   return isLeft ? '<small class="left-tag">좌타</small>' : '';
 }
 
+function handiTag(h) {
+  return `<small class="handi-tag">HDCP ${h}</small>`;
+}
+
 function render() {
   rooms = normalizeRooms(rooms);
   people = normalizePeople(people);
@@ -105,6 +109,7 @@ function render() {
   $('personList').innerHTML = people.map((p, i) => `
     <div class="chip">
       <span>${esc(p.name)}</span>
+      ${handiTag(p.handicap)}
       ${leftTag(p.left)}
       <button type="button" onclick="removePerson(${i})" aria-label="${esc(p.name)} 삭제">×</button>
     </div>
@@ -117,6 +122,7 @@ function render() {
       <div class="db-row">
         <button type="button" class="db-person-btn ${selected ? 'selected' : ''}" onclick="addPersonFromDB(${i})" ${selected ? 'disabled' : ''}>
           <span class="db-name">${esc(p.name)}</span>
+          ${handiTag(p.handicap)}
           ${leftTag(p.left)}
           <span class="db-action">${selected ? '등록됨' : '+ 등록'}</span>
         </button>
@@ -147,9 +153,10 @@ function addRoom() {
   $('roomInput').focus();
 }
 
-function addPerson(name) {
+function addPerson(name, handicapRaw) {
   name = String(name || '').trim();
   const left = $('leftPersonToggle').checked;
+
   if (!name) {
     alertUser('참석자 이름을 입력해주세요.');
     $('personInput').focus();
@@ -160,19 +167,39 @@ function addPerson(name) {
     return false;
   }
 
-  people.push({ name, left });
-  participantDB = normalizePeople([...participantDB, { name, left }]);
+  const handicapStr = String(handicapRaw ?? '').trim();
+  if (handicapStr === '') {
+    alertUser('핸디를 입력해주세요.');
+    $('personHandicapInput').focus();
+    return false;
+  }
+  const handicap = Number(handicapStr);
+  if (!Number.isFinite(handicap)) {
+    alertUser('핸디는 숫자로 입력해주세요.');
+    $('personHandicapInput').focus();
+    return false;
+  }
+  if (handicap < 0 || handicap > 54) {
+    alertUser('핸디는 0~54 사이로 입력해주세요.');
+    $('personHandicapInput').focus();
+    return false;
+  }
+
+  people.push({ name, left, handicap });
+  participantDB = normalizePeople([...participantDB, { name, left, handicap }]);
   saveCurrent();
   saveDatabaseLocal();
   render();
-  toast(`${name}${left ? ' (좌타)' : ''}님을 참석자로 등록했습니다.`);
+  toast(`${name}${left ? ' (좌타)' : ''} · 핸디 ${handicap}님을 참석자로 등록했습니다.`);
   return true;
 }
 
 function addPersonFromInput() {
   const name = $('personInput').value.trim();
-  if (addPerson(name)) {
+  const handicap = $('personHandicapInput').value.trim();
+  if (addPerson(name, handicap)) {
     $('personInput').value = '';
+    $('personHandicapInput').value = '';
     $('leftPersonToggle').checked = false;
     $('personInput').focus();
   }
@@ -185,10 +212,10 @@ function addPersonFromDB(index) {
     alertUser(`${entry.name}님은 이미 이번 모임에 등록되어 있습니다.`);
     return;
   }
-  people.push({ name: entry.name, left: entry.left });
+  people.push({ name: entry.name, left: entry.left, handicap: entry.handicap });
   saveCurrent();
   render();
-  toast(`${entry.name}${entry.left ? ' (좌타)' : ''}님을 참석자로 등록했습니다.`);
+  toast(`${entry.name}${entry.left ? ' (좌타)' : ''} · 핸디 ${entry.handicap}님을 참석자로 등록했습니다.`);
 }
 
 function removeRoom(i) {
@@ -280,10 +307,45 @@ function validateForDraw() {
   return true;
 }
 
-let isDrawing = false;
+// =========================================================
+// 방배정 버튼 공용 상태 관리 (랜덤 / 핸디 균형 배정 공용)
+// =========================================================
+
+let isBusy = false;
+let drawRandomBtnHTML = '';
+let drawHandicapBtnHTML = '';
+
+function setButtonsBusy(activeHTML, which) {
+  const r = $('drawRandomBtn');
+  const h = $('drawHandicapBtn');
+  r.disabled = true;
+  h.disabled = true;
+  if (which === 'random') {
+    r.innerHTML = activeHTML;
+    r.classList.add('drawing');
+  } else {
+    h.innerHTML = activeHTML;
+    h.classList.add('drawing');
+  }
+}
+
+function resetButtons() {
+  const r = $('drawRandomBtn');
+  const h = $('drawHandicapBtn');
+  r.disabled = false;
+  h.disabled = false;
+  r.classList.remove('drawing');
+  h.classList.remove('drawing');
+  r.innerHTML = drawRandomBtnHTML;
+  h.innerHTML = drawHandicapBtnHTML;
+}
+
+// =========================================================
+// 랜덤 방배정
+// =========================================================
 
 function draw() {
-  if (isDrawing) return;
+  if (isBusy) return;
   if (!validateForDraw()) return;
 
   const groups = buildAssignments();
@@ -293,12 +355,8 @@ function draw() {
   }
   groups.sort((a, b) => compareRooms(a.room, b.room));
 
-  isDrawing = true;
-  const btn = $('drawBtn');
-  const originalHTML = btn.innerHTML;
-  btn.disabled = true;
-  btn.classList.add('drawing');
-  btn.innerHTML = '<span class="dice-spin">🎲</span> 방배정 중...';
+  isBusy = true;
+  setButtonsBusy('<span class="dice-spin">🎲</span> 방배정 중...', 'random');
 
   const totalRooms = groups.length;
 
@@ -389,10 +447,8 @@ function draw() {
   function finishAll() {
     $('result').querySelector('.result-head strong').textContent = '🎉 방배정 완료';
     $('progressLabel').textContent = `${people.length}명 · ${totalRooms}개 방`;
-    btn.disabled = false;
-    btn.classList.remove('drawing');
-    btn.innerHTML = originalHTML;
-    isDrawing = false;
+    resetButtons();
+    isBusy = false;
     $('result').scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
@@ -400,106 +456,14 @@ function draw() {
 }
 
 // =========================================================
-// 여기부터 신규 기능: 핸디 균형 배정
-// 기존 랜덤 배정(draw) 로직은 위에서 전혀 수정하지 않았습니다.
+// 핸디 균형 배정 (참석자 등록 시 입력한 핸디를 그대로 사용)
 // =========================================================
 
-function currentAssignMode() {
-  const checked = document.querySelector('input[name="assignMode"]:checked');
-  return checked ? checked.value : 'random';
-}
-
-function updateModeUI() {
-  const isHandicap = currentAssignMode() === 'handicap';
-  $('handicapModeSection').style.display = isHandicap ? 'block' : 'none';
-  $('modeDesc').textContent = isHandicap
-    ? '입력한 핸디를 기준으로 각 방의 실력이 최대한 균형 있게 배정됩니다.'
-    : '참석자를 완전히 무작위로 각 방에 배정합니다. 핸디는 배정에 영향을 주지 않습니다.';
-}
-
-document.querySelectorAll('input[name="assignMode"]').forEach(radio => {
-  radio.addEventListener('change', updateModeUI);
-});
-
-// ---- 참가자(닉네임+핸디) 입력 행 관리 ----
-
-function addHandicapRow(prefillName = '') {
-  const row = document.createElement('div');
-  row.className = 'handicap-row';
-  row.innerHTML = `
-    <input type="text" class="handicap-name" placeholder="닉네임" value="${esc(prefillName)}">
-    <input type="number" class="handicap-value" placeholder="핸디" inputmode="decimal" step="0.1">
-    <button type="button" class="handicap-remove" aria-label="참가자 삭제">×</button>
-  `;
-  row.querySelector('.handicap-remove').addEventListener('click', () => row.remove());
-  $('handicapRows').appendChild(row);
-}
-
-function initHandicapRows(count = 6) {
-  $('handicapRows').innerHTML = '';
-  for (let i = 0; i < count; i++) addHandicapRow();
-}
-
-$('addHandicapRowBtn').addEventListener('click', () => addHandicapRow());
-
-$('loadFromPeopleBtn').addEventListener('click', () => {
-  if (!people.length) {
-    alertUser('먼저 참석자를 등록해주세요.');
-    return;
-  }
-  $('handicapRows').innerHTML = '';
-  people.forEach(p => addHandicapRow(p.name));
-  toast('현재 참석자 명단을 불러왔습니다. 각 참가자의 핸디를 입력해주세요.');
-});
-
-// 입력된 행들을 검증하며 { name, handicap } 배열로 변환.
-// 완전히 빈 행은 조용히 무시하고, 일부만 채워진 행은 사용자에게 안내 후 중단.
-function collectHandicapEntries() {
-  const rows = [...document.querySelectorAll('#handicapRows .handicap-row')];
-  const entries = [];
-
-  for (const row of rows) {
-    const nameInput = row.querySelector('.handicap-name');
-    const handiInput = row.querySelector('.handicap-value');
-    const name = nameInput.value.trim();
-    const handiRaw = handiInput.value.trim();
-
-    if (!name && !handiRaw) continue; // 빈 행은 건너뜀
-
-    if (!name) {
-      alertUser('닉네임이 입력되지 않은 참가자가 있습니다.\n모든 참가자의 닉네임을 입력해주세요.');
-      nameInput.focus();
-      return null;
-    }
-
-    const handicap = Number(handiRaw);
-    if (handiRaw === '' || !Number.isFinite(handicap)) {
-      alertUser(`${name}님의 핸디 값이 올바르지 않습니다.\n숫자로 입력해주세요.`);
-      handiInput.focus();
-      return null;
-    }
-
-    entries.push({ name, handicap });
-  }
-
-  if (entries.length === 0) {
-    alertUser('참가자를 한 명 이상 입력해주세요.');
-    return null;
-  }
-
-  return entries;
-}
-
-// ---- 핸디 균형 배정 알고리즘 ----
-// 참가자를 핸디 내림차순으로 정렬한 뒤, 매번 "현재 총합이 가장 낮은 방"에
-// 우선 배정하는 그리디 방식입니다. 특정 방에 상급자/하급자가 몰리는 것을
-// 방지하고, 방별 총합·평균 핸디를 최대한 균등하게 맞춥니다.
 function assignByHandicap(entries, roomCount) {
   const n = entries.length;
   const base = Math.floor(n / roomCount);
   const remainder = n % roomCount;
 
-  // 나머지 인원이 어느 방에 배정될지는 무작위로 결정 (편향 방지)
   let capacities = Array.from({ length: roomCount }, (_, i) => base + (i < remainder ? 1 : 0));
   capacities = shuffle(capacities);
 
@@ -517,7 +481,6 @@ function assignByHandicap(entries, roomCount) {
     target.sum += person.handicap;
   });
 
-  // 실제 방 번호는 무작위로 매칭한 뒤, 화면에는 번호 순으로 정렬해서 보여줌
   const shuffledRoomRefs = shuffle(rooms.slice(0, roomCount));
   const result = groups.map((g, i) => ({
     room: shuffledRoomRefs[i],
@@ -574,7 +537,7 @@ function renderHandicapResult(groups) {
               </div>
               <div class="result-people">
                 ${g.people.map(p => `
-                  <span class="person">${esc(p.name)} <small class="handi-badge">핸디 ${p.handicap}</small></span>
+                  <span class="person${p.left ? ' left' : ''}">${esc(p.name)}${leftTag(p.left)} <small class="handi-badge">핸디 ${p.handicap}</small></span>
                 `).join('')}
               </div>
               <div class="handicap-stats">
@@ -593,31 +556,26 @@ function renderHandicapResult(groups) {
   `;
 }
 
-let isDrawingHandicap = false;
-
 function drawHandicap() {
-  if (isDrawingHandicap) return;
+  if (isBusy) return;
 
   if (!rooms.length) {
     alertUser('방이 등록되지 않았습니다.\n먼저 방을 등록해주세요.');
     return;
   }
-
-  const entries = collectHandicapEntries();
-  if (!entries) return;
-
-  if (entries.length < rooms.length) {
-    alertUser(`참가자 수가 부족합니다.\n\n현재: ${entries.length}명\n필요: 최소 ${rooms.length}명 (방 1개당 최소 1명 이상 필요)`);
+  if (!people.length) {
+    alertUser('참석자가 등록되지 않았습니다.\n먼저 참석자를 등록해주세요.');
+    return;
+  }
+  if (people.length < rooms.length) {
+    alertUser(`참석자 수가 부족합니다.\n\n현재: ${people.length}명\n필요: 최소 ${rooms.length}명 (방 1개당 최소 1명 이상 필요)`);
     return;
   }
 
-  isDrawingHandicap = true;
-  const btn = $('drawBtn');
-  const originalHTML = btn.innerHTML;
-  btn.disabled = true;
-  btn.classList.add('drawing');
-  btn.innerHTML = '<span class="calc-spin">⚖️</span> 계산 중...';
+  isBusy = true;
+  setButtonsBusy('<span class="calc-spin">⚖️</span> 계산 중...', 'handicap');
 
+  const entries = people.map(p => ({ name: p.name, handicap: p.handicap, left: p.left }));
   const groups = assignByHandicap(entries, rooms.length);
 
   renderHandicapLoading();
@@ -625,10 +583,8 @@ function drawHandicap() {
 
   setTimeout(() => {
     renderHandicapResult(groups);
-    btn.disabled = false;
-    btn.classList.remove('drawing');
-    btn.innerHTML = originalHTML;
-    isDrawingHandicap = false;
+    resetButtons();
+    isBusy = false;
     $('result').scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, 1200);
 }
@@ -639,19 +595,14 @@ function drawHandicap() {
 
 $('addRoomBtn').addEventListener('click', addRoom);
 $('addPersonBtn').addEventListener('click', addPersonFromInput);
-
-// 방배정 버튼: 선택된 모드에 따라 기존 draw() 또는 신규 drawHandicap()으로 분기
-$('drawBtn').addEventListener('click', () => {
-  if (currentAssignMode() === 'handicap') {
-    drawHandicap();
-  } else {
-    draw();
-  }
-});
+$('drawRandomBtn').addEventListener('click', draw);
+$('drawHandicapBtn').addEventListener('click', drawHandicap);
 
 $('roomInput').addEventListener('input', e => { e.target.value = e.target.value.replace(/\D/g, ''); });
 $('roomInput').addEventListener('keydown', e => { if (e.key === 'Enter') addRoom(); });
-$('personInput').addEventListener('keydown', e => { if (e.key === 'Enter') addPersonFromInput(); });
+$('personInput').addEventListener('keydown', e => { if (e.key === 'Enter') $('personHandicapInput').focus(); });
+$('personHandicapInput').addEventListener('keydown', e => { if (e.key === 'Enter') addPersonFromInput(); });
+
 $('helpBtn').addEventListener('click', () => $('helpDialog').showModal());
 $('closeHelp').addEventListener('click', () => $('helpDialog').close());
 $('clearDatabaseBtn').addEventListener('click', () => {
@@ -671,6 +622,7 @@ $('resetBtn').addEventListener('click', () => {
   toast('현재 모임을 초기화했습니다. 참가자 DB는 유지됩니다.');
 });
 
+drawRandomBtnHTML = $('drawRandomBtn').innerHTML;
+drawHandicapBtnHTML = $('drawHandicapBtn').innerHTML;
+
 render();
-updateModeUI();
-initHandicapRows(6);
