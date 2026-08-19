@@ -282,43 +282,55 @@ function validateForDraw() {
 
 let isDrawing = false;
 
-function shuffleGroupsPreview() {
-  const shuffledPeople = shuffle(people);
-  const shuffledRoomsPreview = shuffle(rooms);
-  const sizes = getGroupSizes(shuffledRoomsPreview.length, shuffledPeople.length);
-  let idx = 0;
-  return shuffledRoomsPreview.map((room, i) => {
-    const count = sizes[i] || 2;
-    const members = shuffledPeople.slice(idx, idx + count);
-    idx += count;
-    return { room, people: members };
-  });
-}
+// 현재까지 확정된 방(revealedGroups), 지금 셔플 중인 방(shufflingRoom/shufflingPeople),
+// 아직 순서가 오지 않은 방 개수(totalRooms 기준)를 받아 화면을 그린다.
+function renderSequentialState(revealedGroups, shufflingRoom, shufflingPeople, totalRooms) {
+  const revealedHTML = revealedGroups.map(g => `
+    <div class="room-result reveal-item-done">
+      <div class="room-result-title"><b>🏌️ ${esc(g.room.name)}번 방</b><span>${g.people.length}명${g.room.left ? ' · 좌타방' : ''}</span></div>
+      <div class="result-people">${g.people.map(p => `
+        <span class="person${p.left ? ' left' : ''}">${esc(p.name)}${leftTag(p.left)}</span>
+      `).join('')}</div>
+    </div>
+  `).join('');
 
-function renderPreview(groups) {
+  let shufflingHTML = '';
+  if (shufflingRoom) {
+    shufflingHTML = `
+      <div class="room-result shuffling-room">
+        <div class="room-result-title"><b>🏌️ ${esc(shufflingRoom.name)}번 방</b><span>배정 중...</span></div>
+        <div class="result-people">${shufflingPeople.map(p => `<span class="person shuffle-chip">${esc(p.name)}</span>`).join('')}</div>
+      </div>
+    `;
+  }
+
+  const doneCount = revealedGroups.length + (shufflingRoom ? 1 : 0);
+  const pendingCount = Math.max(0, totalRooms - doneCount);
+  const pendingHTML = Array.from({ length: pendingCount }).map(() => `
+    <div class="room-result pending-room">
+      <div class="room-result-title"><b>🏌️ 대기 중...</b></div>
+    </div>
+  `).join('');
+
   $('result').innerHTML = `
-    <div class="result-card shuffling">
-      <div class="result-head"><strong>🎲 방배정 중...</strong><span>두근두근...</span></div>
+    <div class="result-card ${shufflingRoom ? 'shuffling' : ''}">
+      <div class="result-head"><strong>🎲 방배정 중...</strong><span>${revealedGroups.length}/${totalRooms}개 방 완료</span></div>
       <div class="assignment">
-        ${groups.map(g => `
-          <div class="room-result preview">
-            <div class="room-result-title"><b>🏌️ ${esc(g.room.name)}번 방</b></div>
-            <div class="result-people">${g.people.map(p => `<span class="person shuffle-chip">${esc(p.name)}</span>`).join('')}</div>
-          </div>
-        `).join('')}
+        ${revealedHTML}
+        ${shufflingHTML}
+        ${pendingHTML}
       </div>
     </div>
   `;
 }
 
-// revealStep: 방이 한 개씩 공개되는 간격(초). 기본 2초.
-function renderFinalResult(groups, revealStep = 2) {
+function renderFinalAllDone(groups) {
   $('result').innerHTML = `
     <div class="result-card">
       <div class="result-head"><strong>🎉 방배정 완료</strong><span>${people.length}명 · ${groups.length}개 방</span></div>
       <div class="assignment">
-        ${groups.map((g, i) => `
-          <div class="room-result reveal-item" style="animation-delay: ${i * revealStep}s">
+        ${groups.map(g => `
+          <div class="room-result reveal-item-done">
             <div class="room-result-title"><b>🏌️ ${esc(g.room.name)}번 방</b><span>${g.people.length}명${g.room.left ? ' · 좌타방' : ''}</span></div>
             <div class="result-people">${g.people.map(p => `
               <span class="person${p.left ? ' left' : ''}">${esc(p.name)}${leftTag(p.left)}</span>
@@ -350,31 +362,47 @@ function draw() {
 
   $('result').scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-  const shuffleDuration = 1600;   // 셔플(가짜 배정) 애니메이션 지속 시간
-  const shuffleInterval = 100;    // 셔플 화면 갱신 간격
-  const revealStepSeconds = 2;    // 방 하나씩 공개되는 간격 (요청: 2초)
-  let elapsed = 0;
+  const shuffleDurationPerRoom = 2000; // 방 하나당 셔플 시간 (요청: 2초)
+  const shuffleInterval = 100;         // 셔플 화면 갱신 간격
+  const pauseBetweenRooms = 300;       // 확정 후 다음 방으로 넘어가기 전 잠깐 멈추는 시간
 
-  renderPreview(shuffleGroupsPreview());
-  const timer = setInterval(() => {
-    renderPreview(shuffleGroupsPreview());
-    elapsed += shuffleInterval;
-    if (elapsed >= shuffleDuration) {
-      clearInterval(timer);
-      renderFinalResult(groups, revealStepSeconds);
+  const revealed = [];
+  let roomIndex = 0;
 
-      // 방이 전부 공개될 때까지 버튼을 잠금 상태로 유지
-      const totalRevealMs = groups.length * revealStepSeconds * 1000 + 500;
-      setTimeout(() => {
-        btn.disabled = false;
-        btn.classList.remove('drawing');
-        btn.innerHTML = originalHTML;
-        isDrawing = false;
-      }, totalRevealMs);
-
+  function runRoom() {
+    if (roomIndex >= groups.length) {
+      renderFinalAllDone(groups);
+      btn.disabled = false;
+      btn.classList.remove('drawing');
+      btn.innerHTML = originalHTML;
+      isDrawing = false;
       $('result').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
     }
-  }, shuffleInterval);
+
+    const currentGroup = groups[roomIndex];
+    const alreadyAssignedNames = new Set(revealed.flatMap(g => g.people.map(p => p.name)));
+    const pool = people.filter(p => !alreadyAssignedNames.has(p.name));
+    let elapsed = 0;
+
+    function tick() {
+      const previewPeople = shuffle(pool).slice(0, currentGroup.people.length);
+      renderSequentialState(revealed, currentGroup.room, previewPeople, groups.length);
+      elapsed += shuffleInterval;
+      if (elapsed >= shuffleDurationPerRoom) {
+        clearInterval(timer);
+        revealed.push(currentGroup);
+        renderSequentialState(revealed, null, null, groups.length);
+        roomIndex++;
+        setTimeout(runRoom, pauseBetweenRooms);
+      }
+    }
+
+    tick();
+    var timer = setInterval(tick, shuffleInterval);
+  }
+
+  runRoom();
 }
 
 $('addRoomBtn').addEventListener('click', addRoom);
