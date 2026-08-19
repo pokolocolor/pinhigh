@@ -276,6 +276,16 @@ function shuffle(array) {
   return a;
 }
 
+// 좌타방 없이 좌타 참석자만 있는 경우, 두 배정 방식 공용으로 쓰는 경고 배너
+function leftRoomWarningHTML() {
+  const hasLeftRoom = rooms.some(r => r.left);
+  const hasLeftPeople = people.some(p => p.left);
+  if (hasLeftPeople && !hasLeftRoom) {
+    return `<div class="result-warning">⚠️ 좌타 참석자가 있지만 좌타방이 등록되어 있지 않아, 좌타 여부와 관계없이 배정되었습니다.</div>`;
+  }
+  return '';
+}
+
 function getGroupSizes(roomCount, personCount) {
   const min = roomCount * 2;
   const extra = personCount - min;
@@ -381,6 +391,7 @@ function draw() {
   setButtonsBusy('<span class="dice-spin">🎲</span> 방배정 중...', 'random');
 
   const totalRooms = groups.length;
+  const warningHTML = leftRoomWarningHTML();
 
   $('result').innerHTML = `
     <div class="result-card">
@@ -388,6 +399,7 @@ function draw() {
         <strong>🎲 방배정 중...</strong>
         <span id="progressLabel">0/${totalRooms}개 방 완료</span>
       </div>
+      ${warningHTML}
       <div class="assignment" id="assignmentArea">
         <div id="revealedList"></div>
         <div id="currentRoomSlot"></div>
@@ -478,45 +490,72 @@ function draw() {
 }
 
 // =========================================================
-// 핸디 균형 배정 (좌타 참석자는 좌타방에 우선 배치, 나머지는 핸디 균형 그리디)
+// 핸디 균형 배정
+// 1) 방 정원을 인원수/방개수로 최대한 균등하게 미리 계산
+// 2) 좌타 참석자를 좌타방 정원 안에서 핸디 낮은 순으로 우선 배치
+// 3) 나머지 인원을 핸디 낮은 순으로, 매번 "인원이 가장 적은 방"(동률이면
+//    평균 핸디가 가장 안 좋은 방)에 배치해 인원수와 실력을 동시에 균형
 // =========================================================
 
+function computeRoomCapacities(totalPeople, roomCount) {
+  const base = Math.floor(totalPeople / roomCount);
+  const remainder = totalPeople % roomCount;
+  const capacities = Array(roomCount).fill(base);
+  shuffle(Array.from({ length: roomCount }, (_, i) => i))
+    .slice(0, remainder)
+    .forEach(i => { capacities[i] += 1; });
+  return capacities;
+}
+
+function pickTargetGroup(candidateGroups) {
+  const available = candidateGroups.filter(g => g.people.length < g.capacity);
+  if (!available.length) return null;
+  available.sort((a, b) => {
+    if (a.people.length !== b.people.length) return a.people.length - b.people.length;
+    const avgA = a.people.length ? a.sum / a.people.length : 0;
+    const avgB = b.people.length ? b.sum / b.people.length : 0;
+    return avgB - avgA;
+  });
+  return available[0];
+}
+
 function assignByHandicap(entries, roomList) {
-  const groups = shuffle(roomList.map(r => ({ ...r }))).map(room => ({ room, people: [], sum: 0 }));
+  const totalPeople = entries.length;
+  const roomCount = roomList.length;
+  const capacities = computeRoomCapacities(totalPeople, roomCount);
 
-  const leftRoomGroups = groups.filter(g => g.room.left);
-  const hasLeftRoom = leftRoomGroups.length > 0;
+  const groups = shuffle(roomList.map(r => ({ ...r }))).map((room, i) => ({
+    room,
+    capacity: capacities[i],
+    people: [],
+    sum: 0
+  }));
 
-  // 1단계: 좌타자를 좌타방에 우선 배치 (핸디 낮은 상위 랭커부터, 좌타방들 사이는 핸디 합이 적은 방부터 채움)
+  const leftGroups = groups.filter(g => g.room.left);
+  const hasLeftRoom = leftGroups.length > 0;
+
+  // 1단계: 좌타 참석자를 좌타방 정원 안에서 핸디 낮은(좋은) 순으로 우선 배치
   const leftPeopleSorted = shuffle(entries.filter(p => p.left)).sort((a, b) => a.handicap - b.handicap);
-  const placedNames = new Set();
+  const overflow = [];
 
-  if (hasLeftRoom) {
-    leftPeopleSorted.forEach(person => {
-      leftRoomGroups.sort((a, b) => a.sum - b.sum || a.people.length - b.people.length);
-      const target = leftRoomGroups[0];
+  leftPeopleSorted.forEach(person => {
+    const target = hasLeftRoom ? pickTargetGroup(leftGroups) : null;
+    if (target) {
       target.people.push(person);
       target.sum += person.handicap;
-      placedNames.add(person.name);
-    });
-  }
+    } else {
+      overflow.push(person); // 좌타방이 없거나 정원이 가득 찬 경우 일반 배정으로 넘김
+    }
+  });
 
-  // 2단계: 좌타방이 없어 배치되지 못한 좌타자 + 모든 우타자를
-  // 전체 방에 걸쳐 평균 핸디가 균등해지도록 그리디 배정
-  const remaining = shuffle(entries.filter(p => !placedNames.has(p.name)))
-    .sort((a, b) => b.handicap - a.handicap);
+  // 2단계: 나머지 인원(우타 전원 + 좌타 정원 초과분)을 핸디 낮은 순으로
+  // 정렬해, 매번 인원이 가장 적은 방부터 채워 인원수와 실력을 균형있게 배정
+  const rightPeople = entries.filter(p => !p.left);
+  const remaining = shuffle([...rightPeople, ...overflow]).sort((a, b) => a.handicap - b.handicap);
 
   remaining.forEach(person => {
-    let target = groups[0];
-    let targetAvg = target.people.length ? target.sum / target.people.length : -Infinity;
-    for (let i = 1; i < groups.length; i++) {
-      const g = groups[i];
-      const gAvg = g.people.length ? g.sum / g.people.length : -Infinity;
-      if (gAvg < targetAvg) {
-        target = g;
-        targetAvg = gAvg;
-      }
-    }
+    const target = pickTargetGroup(groups);
+    if (!target) return; // 정원 총합 = 전체 인원이므로 이론상 발생하지 않음
     target.people.push(person);
     target.sum += person.handicap;
   });
@@ -543,7 +582,7 @@ function renderHandicapLoading() {
   `;
 }
 
-function renderHandicapResult(groups, warnNoLeftRoom) {
+function renderHandicapResult(groups) {
   const allPeople = groups.flatMap(g => g.people);
   const totalSum = allPeople.reduce((s, p) => s + p.handicap, 0);
   const totalAvg = allPeople.length ? totalSum / allPeople.length : 0;
@@ -556,7 +595,7 @@ function renderHandicapResult(groups, warnNoLeftRoom) {
         <span>${allPeople.length}명 · ${groups.length}개 방</span>
       </div>
 
-      ${warnNoLeftRoom ? `<div class="result-warning">⚠️ 좌타 참석자가 있지만 좌타방이 등록되어 있지 않아, 좌타 여부와 관계없이 핸디 기준으로만 배정되었습니다.</div>` : ''}
+      ${leftRoomWarningHTML()}
 
       <div class="handicap-overview">
         <div class="overview-item"><span>전체 참가자</span><b>${allPeople.length}명</b></div>
@@ -617,15 +656,13 @@ function drawHandicap() {
   setButtonsBusy('<span class="calc-spin">⚖️</span> 계산 중...', 'handicap');
 
   const entries = people.map(p => ({ name: p.name, handicap: p.handicap, left: p.left }));
-  const hasLeftRoom = rooms.some(r => r.left);
-  const hasLeftPeople = people.some(p => p.left);
   const groups = assignByHandicap(entries, rooms);
 
   renderHandicapLoading();
   $('result').scrollIntoView({ behavior: 'smooth', block: 'center' });
 
   setTimeout(() => {
-    renderHandicapResult(groups, hasLeftPeople && !hasLeftRoom);
+    renderHandicapResult(groups);
     resetButtons();
     isBusy = false;
     $('result').scrollIntoView({ behavior: 'smooth', block: 'center' });
