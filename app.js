@@ -9,6 +9,7 @@ const STORAGE = {
 let participantDB = normalizePeople(readJSON(STORAGE.database));
 let rooms = normalizeRooms(readJSON(STORAGE.rooms));
 let people = normalizePeople(readJSON(STORAGE.people));
+let selectedHandicap = null;
 
 function readJSON(key, fallback = []) {
   try {
@@ -86,15 +87,31 @@ function handiTag(h) {
   return `<small class="handi-tag">HDCP ${h}</small>`;
 }
 
-// -- 핸디 드롭다운 옵션(-25 ~ 40) 채우기 --
-function initHandicapSelect() {
-  const select = $('personHandicapInput');
-  for (let h = -25; h <= 40; h++) {
-    const opt = document.createElement('option');
-    opt.value = h;
-    opt.textContent = h;
-    select.appendChild(opt);
+// -- 핸디 선택 팝업(다이얼로그) 그리드 구성 --
+function buildHandicapGrid() {
+  const grid = $('handicapGrid');
+  grid.innerHTML = '';
+  for (let h = 40; h >= -25; h--) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'handicap-grid-btn';
+    btn.textContent = h;
+    btn.dataset.value = h;
+    btn.addEventListener('click', () => {
+      selectedHandicap = h;
+      $('personHandicapBtnLabel').textContent = h;
+      $('personHandicapBtn').classList.add('selected');
+      $('handicapDialog').close();
+      highlightHandicapGrid();
+    });
+    grid.appendChild(btn);
   }
+}
+
+function highlightHandicapGrid() {
+  document.querySelectorAll('.handicap-grid-btn').forEach(btn => {
+    btn.classList.toggle('active', Number(btn.dataset.value) === selectedHandicap);
+  });
 }
 
 function render() {
@@ -164,7 +181,7 @@ function addRoom() {
   $('roomInput').focus();
 }
 
-function addPerson(name, handicapRaw) {
+function addPerson(name, handicapValue) {
   name = String(name || '').trim();
   const left = $('leftPersonToggle').checked;
 
@@ -178,16 +195,14 @@ function addPerson(name, handicapRaw) {
     return false;
   }
 
-  const handicapStr = String(handicapRaw ?? '').trim();
-  if (handicapStr === '') {
+  if (handicapValue === null || handicapValue === undefined || handicapValue === '') {
     alertUser('핸디를 선택해주세요.');
-    $('personHandicapInput').focus();
+    $('personHandicapBtn').focus();
     return false;
   }
-  const handicap = Number(handicapStr);
+  const handicap = Number(handicapValue);
   if (!Number.isFinite(handicap)) {
     alertUser('핸디 값이 올바르지 않습니다. 다시 선택해주세요.');
-    $('personHandicapInput').focus();
     return false;
   }
 
@@ -202,10 +217,11 @@ function addPerson(name, handicapRaw) {
 
 function addPersonFromInput() {
   const name = $('personInput').value.trim();
-  const handicap = $('personHandicapInput').value;
-  if (addPerson(name, handicap)) {
+  if (addPerson(name, selectedHandicap)) {
     $('personInput').value = '';
-    $('personHandicapInput').selectedIndex = 0;
+    selectedHandicap = null;
+    $('personHandicapBtnLabel').textContent = '핸디';
+    $('personHandicapBtn').classList.remove('selected');
     $('leftPersonToggle').checked = false;
     $('personInput').focus();
   }
@@ -606,11 +622,19 @@ $('drawHandicapBtn').addEventListener('click', drawHandicap);
 
 $('roomInput').addEventListener('input', e => { e.target.value = e.target.value.replace(/\D/g, ''); });
 $('roomInput').addEventListener('keydown', e => { if (e.key === 'Enter') addRoom(); });
-$('personInput').addEventListener('keydown', e => { if (e.key === 'Enter') $('personHandicapInput').focus(); });
 
-$('personHandicapInput').addEventListener('change', () => {
-  if ($('personInput').value.trim()) addPersonFromInput();
+$('personInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    highlightHandicapGrid();
+    $('handicapDialog').showModal();
+  }
 });
+
+$('personHandicapBtn').addEventListener('click', () => {
+  highlightHandicapGrid();
+  $('handicapDialog').showModal();
+});
+$('closeHandicapDialog').addEventListener('click', () => $('handicapDialog').close());
 
 $('helpBtn').addEventListener('click', () => $('helpDialog').showModal());
 $('closeHelp').addEventListener('click', () => $('helpDialog').close());
@@ -634,5 +658,5 @@ $('resetBtn').addEventListener('click', () => {
 drawRandomBtnHTML = $('drawRandomBtn').innerHTML;
 drawHandicapBtnHTML = $('drawHandicapBtn').innerHTML;
 
-initHandicapSelect();
+buildHandicapGrid();
 render();
