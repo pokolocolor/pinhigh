@@ -302,7 +302,6 @@ function draw() {
 
   const totalRooms = groups.length;
 
-  // 결과 영역 뼈대는 딱 한 번만 그린다. 이후에는 부분만 갱신한다.
   $('result').innerHTML = `
     <div class="result-card">
       <div class="result-head">
@@ -319,9 +318,9 @@ function draw() {
 
   $('result').scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-  const shuffleDurationPerRoom = 2000; // 방 하나당 셔플 시간
-  const shuffleInterval = 100;         // 셔플 갱신 간격
-  const pauseBetweenRooms = 300;       // 확정 후 다음 방 시작 전 여유 시간
+  const shuffleDurationPerRoom = 2000;
+  const shuffleInterval = 100;
+  const pauseBetweenRooms = 300;
 
   let roomIndex = 0;
   const revealedNames = new Set();
@@ -344,7 +343,6 @@ function draw() {
     const currentGroup = groups[roomIndex];
     const pool = people.filter(p => !revealedNames.has(p.name));
 
-    // 셔플 중인 방 카드는 방이 바뀔 때 한 번만 새로 만든다.
     $('currentRoomSlot').innerHTML = `
       <div class="room-result shuffling-room">
         <div class="room-result-title"><b>🏌️ ${esc(currentGroup.room.name)}번 방</b><span>배정 중...</span></div>
@@ -357,7 +355,6 @@ function draw() {
     const chipsEl = $('shuffleChips');
 
     function tick() {
-      // 카드 전체가 아니라 사람 칩 부분만 갱신 → 애니메이션이 리셋되지 않음
       const previewPeople = shuffle(pool).slice(0, currentGroup.people.length);
       chipsEl.innerHTML = previewPeople.map(p => `<span class="person shuffle-chip">${esc(p.name)}</span>`).join('');
       elapsed += shuffleInterval;
@@ -375,7 +372,6 @@ function draw() {
     currentGroup.people.forEach(p => revealedNames.add(p.name));
     $('currentRoomSlot').innerHTML = '';
 
-    // 확정된 카드는 목록 끝에 '추가'만 함 → 기존 카드는 절대 다시 그리지 않음
     $('revealedList').insertAdjacentHTML('beforeend', `
       <div class="room-result reveal-item-done">
         <div class="room-result-title"><b>🏌️ ${esc(currentGroup.room.name)}번 방</b><span>${currentGroup.people.length}명${currentGroup.room.left ? ' · 좌타방' : ''}</span></div>
@@ -403,9 +399,256 @@ function draw() {
   startRoom();
 }
 
+// =========================================================
+// 여기부터 신규 기능: 핸디 균형 배정
+// 기존 랜덤 배정(draw) 로직은 위에서 전혀 수정하지 않았습니다.
+// =========================================================
+
+function currentAssignMode() {
+  const checked = document.querySelector('input[name="assignMode"]:checked');
+  return checked ? checked.value : 'random';
+}
+
+function updateModeUI() {
+  const isHandicap = currentAssignMode() === 'handicap';
+  $('handicapModeSection').style.display = isHandicap ? 'block' : 'none';
+  $('modeDesc').textContent = isHandicap
+    ? '입력한 핸디를 기준으로 각 방의 실력이 최대한 균형 있게 배정됩니다.'
+    : '참석자를 완전히 무작위로 각 방에 배정합니다. 핸디는 배정에 영향을 주지 않습니다.';
+}
+
+document.querySelectorAll('input[name="assignMode"]').forEach(radio => {
+  radio.addEventListener('change', updateModeUI);
+});
+
+// ---- 참가자(닉네임+핸디) 입력 행 관리 ----
+
+function addHandicapRow(prefillName = '') {
+  const row = document.createElement('div');
+  row.className = 'handicap-row';
+  row.innerHTML = `
+    <input type="text" class="handicap-name" placeholder="닉네임" value="${esc(prefillName)}">
+    <input type="number" class="handicap-value" placeholder="핸디" inputmode="decimal" step="0.1">
+    <button type="button" class="handicap-remove" aria-label="참가자 삭제">×</button>
+  `;
+  row.querySelector('.handicap-remove').addEventListener('click', () => row.remove());
+  $('handicapRows').appendChild(row);
+}
+
+function initHandicapRows(count = 6) {
+  $('handicapRows').innerHTML = '';
+  for (let i = 0; i < count; i++) addHandicapRow();
+}
+
+$('addHandicapRowBtn').addEventListener('click', () => addHandicapRow());
+
+$('loadFromPeopleBtn').addEventListener('click', () => {
+  if (!people.length) {
+    alertUser('먼저 참석자를 등록해주세요.');
+    return;
+  }
+  $('handicapRows').innerHTML = '';
+  people.forEach(p => addHandicapRow(p.name));
+  toast('현재 참석자 명단을 불러왔습니다. 각 참가자의 핸디를 입력해주세요.');
+});
+
+// 입력된 행들을 검증하며 { name, handicap } 배열로 변환.
+// 완전히 빈 행은 조용히 무시하고, 일부만 채워진 행은 사용자에게 안내 후 중단.
+function collectHandicapEntries() {
+  const rows = [...document.querySelectorAll('#handicapRows .handicap-row')];
+  const entries = [];
+
+  for (const row of rows) {
+    const nameInput = row.querySelector('.handicap-name');
+    const handiInput = row.querySelector('.handicap-value');
+    const name = nameInput.value.trim();
+    const handiRaw = handiInput.value.trim();
+
+    if (!name && !handiRaw) continue; // 빈 행은 건너뜀
+
+    if (!name) {
+      alertUser('닉네임이 입력되지 않은 참가자가 있습니다.\n모든 참가자의 닉네임을 입력해주세요.');
+      nameInput.focus();
+      return null;
+    }
+
+    const handicap = Number(handiRaw);
+    if (handiRaw === '' || !Number.isFinite(handicap)) {
+      alertUser(`${name}님의 핸디 값이 올바르지 않습니다.\n숫자로 입력해주세요.`);
+      handiInput.focus();
+      return null;
+    }
+
+    entries.push({ name, handicap });
+  }
+
+  if (entries.length === 0) {
+    alertUser('참가자를 한 명 이상 입력해주세요.');
+    return null;
+  }
+
+  return entries;
+}
+
+// ---- 핸디 균형 배정 알고리즘 ----
+// 참가자를 핸디 내림차순으로 정렬한 뒤, 매번 "현재 총합이 가장 낮은 방"에
+// 우선 배정하는 그리디 방식입니다. 특정 방에 상급자/하급자가 몰리는 것을
+// 방지하고, 방별 총합·평균 핸디를 최대한 균등하게 맞춥니다.
+function assignByHandicap(entries, roomCount) {
+  const n = entries.length;
+  const base = Math.floor(n / roomCount);
+  const remainder = n % roomCount;
+
+  // 나머지 인원이 어느 방에 배정될지는 무작위로 결정 (편향 방지)
+  let capacities = Array.from({ length: roomCount }, (_, i) => base + (i < remainder ? 1 : 0));
+  capacities = shuffle(capacities);
+
+  const groups = capacities.map(cap => ({ capacity: cap, people: [], sum: 0 }));
+
+  const sorted = entries.slice().sort((a, b) => b.handicap - a.handicap);
+
+  sorted.forEach(person => {
+    let target = null;
+    for (const g of groups) {
+      if (g.people.length >= g.capacity) continue;
+      if (!target || g.sum < target.sum) target = g;
+    }
+    target.people.push(person);
+    target.sum += person.handicap;
+  });
+
+  // 실제 방 번호는 무작위로 매칭한 뒤, 화면에는 번호 순으로 정렬해서 보여줌
+  const shuffledRoomRefs = shuffle(rooms.slice(0, roomCount));
+  const result = groups.map((g, i) => ({
+    room: shuffledRoomRefs[i],
+    people: g.people,
+    sum: g.sum,
+    avg: g.people.length ? g.sum / g.people.length : 0
+  }));
+
+  result.sort((a, b) => compareRooms(a.room, b.room));
+  return result;
+}
+
+function renderHandicapLoading() {
+  $('result').innerHTML = `
+    <div class="result-card shuffling">
+      <div class="result-head">
+        <strong><span class="calc-spin">⚖️</span> 핸디 균형 계산 중...</strong>
+        <span>참가자 실력을 분석하고 있어요...</span>
+      </div>
+    </div>
+  `;
+}
+
+function renderHandicapResult(groups) {
+  const allPeople = groups.flatMap(g => g.people);
+  const totalSum = allPeople.reduce((s, p) => s + p.handicap, 0);
+  const totalAvg = allPeople.length ? totalSum / allPeople.length : 0;
+  const maxAvg = Math.max(...groups.map(g => g.avg), 1);
+
+  $('result').innerHTML = `
+    <div class="result-card">
+      <div class="result-head">
+        <strong>🎉 핸디 균형 배정 완료</strong>
+        <span>${allPeople.length}명 · ${groups.length}개 방</span>
+      </div>
+
+      <div class="handicap-overview">
+        <div class="overview-item"><span>전체 참가자</span><b>${allPeople.length}명</b></div>
+        <div class="overview-item"><span>전체 총합 핸디</span><b>${totalSum}</b></div>
+        <div class="overview-item"><span>전체 평균 핸디</span><b>${totalAvg.toFixed(2)}</b></div>
+      </div>
+
+      <div class="assignment">
+        ${groups.map((g, i) => {
+          const dev = g.avg - totalAvg;
+          const devAbs = Math.abs(dev);
+          const devClass = devAbs < 0.5 ? 'dev-good' : (devAbs < 1.5 ? 'dev-ok' : 'dev-warn');
+          const barPct = maxAvg ? (g.avg / maxAvg) * 100 : 0;
+          return `
+            <div class="room-result reveal-item-done handicap-room" style="animation-delay: ${i * 0.15}s">
+              <div class="room-result-title">
+                <b>🏌️ ${esc(g.room.name)}번 방</b>
+                <span>${g.people.length}명</span>
+              </div>
+              <div class="result-people">
+                ${g.people.map(p => `
+                  <span class="person">${esc(p.name)} <small class="handi-badge">핸디 ${p.handicap}</small></span>
+                `).join('')}
+              </div>
+              <div class="handicap-stats">
+                <span class="stat-chip">총합 핸디 <b>${g.sum}</b></span>
+                <span class="stat-chip">평균 핸디 <b>${g.avg.toFixed(2)}</b></span>
+                <span class="stat-chip ${devClass}">전체 평균과 편차 ${dev >= 0 ? '+' : ''}${dev.toFixed(2)}</span>
+              </div>
+              <div class="balance-bar-track">
+                <div class="balance-bar-fill" style="width:${barPct}%"></div>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+  `;
+}
+
+let isDrawingHandicap = false;
+
+function drawHandicap() {
+  if (isDrawingHandicap) return;
+
+  if (!rooms.length) {
+    alertUser('방이 등록되지 않았습니다.\n먼저 방을 등록해주세요.');
+    return;
+  }
+
+  const entries = collectHandicapEntries();
+  if (!entries) return;
+
+  if (entries.length < rooms.length) {
+    alertUser(`참가자 수가 부족합니다.\n\n현재: ${entries.length}명\n필요: 최소 ${rooms.length}명 (방 1개당 최소 1명 이상 필요)`);
+    return;
+  }
+
+  isDrawingHandicap = true;
+  const btn = $('drawBtn');
+  const originalHTML = btn.innerHTML;
+  btn.disabled = true;
+  btn.classList.add('drawing');
+  btn.innerHTML = '<span class="calc-spin">⚖️</span> 계산 중...';
+
+  const groups = assignByHandicap(entries, rooms.length);
+
+  renderHandicapLoading();
+  $('result').scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+  setTimeout(() => {
+    renderHandicapResult(groups);
+    btn.disabled = false;
+    btn.classList.remove('drawing');
+    btn.innerHTML = originalHTML;
+    isDrawingHandicap = false;
+    $('result').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 1200);
+}
+
+// =========================================================
+// 이벤트 바인딩
+// =========================================================
+
 $('addRoomBtn').addEventListener('click', addRoom);
 $('addPersonBtn').addEventListener('click', addPersonFromInput);
-$('drawBtn').addEventListener('click', draw);
+
+// 방배정 버튼: 선택된 모드에 따라 기존 draw() 또는 신규 drawHandicap()으로 분기
+$('drawBtn').addEventListener('click', () => {
+  if (currentAssignMode() === 'handicap') {
+    drawHandicap();
+  } else {
+    draw();
+  }
+});
+
 $('roomInput').addEventListener('input', e => { e.target.value = e.target.value.replace(/\D/g, ''); });
 $('roomInput').addEventListener('keydown', e => { if (e.key === 'Enter') addRoom(); });
 $('personInput').addEventListener('keydown', e => { if (e.key === 'Enter') addPersonFromInput(); });
@@ -429,3 +672,5 @@ $('resetBtn').addEventListener('click', () => {
 });
 
 render();
+updateModeUI();
+initHandicapRows(6);
