@@ -656,6 +656,11 @@ let importCandidates = [];
 let importSeq = 0;
 let lastRawOcrText = '';
 
+// 영역 크롭 관련 상태
+let cropOriginalImage = null; // 원본 이미지(HTMLImageElement, natural 크기 기준)
+let cropSelection = null;     // 원본 이미지 픽셀 좌표 기준 선택 영역 {x, y, w, h}
+let cropDragStart = null;     // 드래그 시작 지점(크롭 프레임 기준 좌표)
+
 function normalizeDashChars(text) {
   // OCR이 마이너스 기호를 다양한 대시류 문자(en dash, em dash, minus sign 등)로
   // 잘못 인식하는 경우가 있어, 모두 표준 하이픈(-)으로 통일시킨다.
@@ -795,49 +800,246 @@ function setOcrLoading(visible, percent) {
   }
 }
 
-// OCR 정확도를 높이기 위한 이미지 전처리: 확대 + 그레이스케일 + 대비 강화
-async function preprocessImageForOcr(file) {
-  const dataUrl = await new Promise((resolve, reject) => {
+// ---- 파일 → dataURL / Image 엘리먼트 로딩 헬퍼 ----
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result);
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+}
 
-  const img = await new Promise((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => resolve(image);
-    image.onerror = reject;
-    image.src = dataUrl;
+function loadImageElement(dataUrl) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = dataUrl;
   });
+}
 
-  const targetWidth = Math.max(img.width, 1600);
-  const scale = targetWidth / img.width;
+// ---- Otsu 이진화 임계값 계산 ----
+function computeOtsuThreshold(histogram, totalPixels) {
+  let sum = 0;
+  for (let i = 0; i < 256; i++) sum += i * histogram[i];
+
+  let sumB = 0, weightB = 0, maxVariance = 0, threshold = 127;
+  for (let t = 0; t < 256; t++) {
+    weightB += histogram[t];
+    if (weightB === 0) continue;
+    const weightF = totalPixels - weightB;
+    if (weightF === 0) break;
+
+    sumB += t * histogram[t];
+    const meanB = sumB / weightB;
+    const meanF = (sum - sumB) / weightF;
+    const variance = weightB * weightF * (meanB - meanF) * (meanB - meanF);
+
+    if (variance > maxVariance) {
+      maxVariance = variance;
+      threshold = t;
+    }
+  }
+  return threshold;
+}
+
+// ---- OCR 인식률 향상을 위한 이미지 전처리 ----
+// 1) 업스케일  2) 그레이스케일  3) 언샵 마스크(경계 강화)  4) 대비 보정  5) Otsu 이진화
+async function preprocessImageForOcr(sourceCanvas) {
+  const srcWidth = sourceCanvas.width;
+  const srcHeight = sourceCanvas.height;
+
+  const targetWidth = Math.max(srcWidth, 1600);
+  let scale = targetWidth / srcWidth;
+
+  // 아주 작은 영역을 과도하게 확대할 때 계산량이 폭발적으로 늘어나는 것을 방지
+  const maxPixels = 6000000;
+  if (srcWidth * srcHeight * scale * scale > maxPixels) {
+    scale = Math.sqrt(maxPixels / (srcWidth * srcHeight));
+  }
+  scale = Math.max(scale, 1);
+
   const canvas = document.createElement('canvas');
-  canvas.width = Math.round(img.width * scale);
-  canvas.height = Math.round(img.height * scale);
+  canvas.width = Math.max(1, Math.round(srcWidth * scale));
+  canvas.height = Math.max(1, Math.round(srcHeight * scale));
+
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  ctx.drawImage(sourceCanvas, 0, 0, canvas.width, canvas.height);
 
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   const data = imageData.data;
-  const contrast = 1.35;
+  const w = canvas.width, h = canvas.height;
+  const pixelCount = w * h;
+
+  // 1) 그레이스케일
+  const gray = new Float32Array(pixelCount);
+  for (let i = 0, p = 0; i < data.length; i += 4, p++) {
+    gray[p] = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+  }
+
+  // 2) 언샵 마스크: 3x3 박스 블러와의 차이를 더해 글자 경계를 뚜렷하게 함
+  const blurred = new Float32Array(pixelCount);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      let sum = 0, count = 0;
+      for (let dy = -1; dy <= 1; dy++) {
+        const ny = y + dy;
+        if (ny < 0 || ny >= h) continue;
+        for (let dx = -1; dx <= 1; dx++) {
+          const nx = x + dx;
+          if (nx < 0 || nx >= w) continue;
+          sum += gray[ny * w + nx];
+          count++;
+        }
+      }
+      blurred[y * w + x] = sum / count;
+    }
+  }
+
+  const sharpenAmount = 0.8;
+  const sharpened = new Float32Array(pixelCount);
+  for (let p = 0; p < pixelCount; p++) {
+    let v = gray[p] + sharpenAmount * (gray[p] - blurred[p]);
+    sharpened[p] = Math.max(0, Math.min(255, v));
+  }
+
+  // 3) 대비 보정
+  const contrast = 1.25;
   const intercept = 128 * (1 - contrast);
-  for (let i = 0; i < data.length; i += 4) {
-    const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
-    let v = gray * contrast + intercept;
-    v = Math.max(0, Math.min(255, v));
+  for (let p = 0; p < pixelCount; p++) {
+    sharpened[p] = Math.max(0, Math.min(255, sharpened[p] * contrast + intercept));
+  }
+
+  // 4) Otsu 이진화: 최적 임계값을 자동 계산해 흑/백 두 값으로 변환
+  const histogram = new Array(256).fill(0);
+  for (let p = 0; p < pixelCount; p++) {
+    histogram[Math.round(sharpened[p])]++;
+  }
+  const threshold = computeOtsuThreshold(histogram, pixelCount);
+
+  for (let i = 0, p = 0; i < data.length; i += 4, p++) {
+    const v = sharpened[p] > threshold ? 255 : 0;
     data[i] = data[i + 1] = data[i + 2] = v;
   }
-  ctx.putImageData(imageData, 0, 0);
 
+  ctx.putImageData(imageData, 0, 0);
   return canvas.toDataURL('image/png');
 }
 
-async function handleImportImage(file) {
-  if (!file) return;
+// ---- Tesseract 인식 실행: PSM 4(단일 열 텍스트 목록) + 공백 보존 ----
+async function recognizeWithTesseract(imageSource, onProgress) {
+  const { data } = await Tesseract.recognize(imageSource, 'kor+eng', {
+    tessedit_pageseg_mode: '4',
+    preserve_interword_spaces: '1',
+    logger: m => {
+      if (m.status === 'recognizing text' && typeof m.progress === 'number' && onProgress) {
+        onProgress(Math.round(m.progress * 100));
+      }
+    }
+  });
+  return data.text || '';
+}
+
+// ---- 크롭 다이얼로그: 이미지 선택 시 시작 ----
+async function openCropDialogWithFile(file) {
+  try {
+    const dataUrl = await fileToDataUrl(file);
+    const img = await loadImageElement(dataUrl);
+    cropOriginalImage = img;
+    clearCropSelection();
+    $('cropImagePreview').src = dataUrl;
+    $('cropDialog').showModal();
+  } catch (err) {
+    alertUser('이미지를 불러오지 못했습니다.\n다른 이미지로 다시 시도해주세요.');
+  }
+}
+
+function clearCropSelection() {
+  cropSelection = null;
+  const box = $('cropSelectionBox');
+  box.style.display = 'none';
+  box.style.width = '0px';
+  box.style.height = '0px';
+}
+
+function getCropFrameRelativePoint(e) {
+  const rect = $('cropFrame').getBoundingClientRect();
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  return {
+    x: Math.min(Math.max(clientX - rect.left, 0), rect.width),
+    y: Math.min(Math.max(clientY - rect.top, 0), rect.height)
+  };
+}
+
+function onCropPointerDown(e) {
+  if (!cropOriginalImage) return;
+  e.preventDefault();
+  cropDragStart = getCropFrameRelativePoint(e);
+  const box = $('cropSelectionBox');
+  box.style.display = 'block';
+  box.style.left = cropDragStart.x + 'px';
+  box.style.top = cropDragStart.y + 'px';
+  box.style.width = '0px';
+  box.style.height = '0px';
+}
+
+function onCropPointerMove(e) {
+  if (!cropDragStart) return;
+  e.preventDefault();
+  const point = getCropFrameRelativePoint(e);
+  const x = Math.min(cropDragStart.x, point.x);
+  const y = Math.min(cropDragStart.y, point.y);
+  const w = Math.abs(point.x - cropDragStart.x);
+  const h = Math.abs(point.y - cropDragStart.y);
+  const box = $('cropSelectionBox');
+  box.style.left = x + 'px';
+  box.style.top = y + 'px';
+  box.style.width = w + 'px';
+  box.style.height = h + 'px';
+}
+
+function onCropPointerUp(e) {
+  if (!cropDragStart) return;
+  const point = getCropFrameRelativePoint(e);
+  const displayX = Math.min(cropDragStart.x, point.x);
+  const displayY = Math.min(cropDragStart.y, point.y);
+  const displayW = Math.abs(point.x - cropDragStart.x);
+  const displayH = Math.abs(point.y - cropDragStart.y);
+  cropDragStart = null;
+
+  if (displayW < 16 || displayH < 16 || !cropOriginalImage) {
+    clearCropSelection();
+    return;
+  }
+
+  const previewImg = $('cropImagePreview');
+  const displayedWidth = previewImg.clientWidth;
+  const displayedHeight = previewImg.clientHeight;
+  if (!displayedWidth || !displayedHeight) { clearCropSelection(); return; }
+
+  const scaleX = cropOriginalImage.naturalWidth / displayedWidth;
+  const scaleY = cropOriginalImage.naturalHeight / displayedHeight;
+
+  cropSelection = {
+    x: Math.round(displayX * scaleX),
+    y: Math.round(displayY * scaleY),
+    w: Math.round(displayW * scaleX),
+    h: Math.round(displayH * scaleY)
+  };
+}
+
+function closeCropDialog() {
+  if ($('cropDialog').open) $('cropDialog').close();
+  clearCropSelection();
+}
+
+// ---- 크롭(또는 전체 이미지) 확정 → 전처리 → OCR 실행 ----
+async function runOcrPipeline() {
+  if (!cropOriginalImage) return;
   if (typeof Tesseract === 'undefined') {
     alertUser('이미지 인식 라이브러리를 불러오지 못했습니다.\n인터넷 연결을 확인한 뒤 다시 시도해주세요.');
     return;
@@ -846,26 +1048,35 @@ async function handleImportImage(file) {
   setOcrLoading(true, 0);
 
   try {
-    let ocrSource = file;
-    try {
-      ocrSource = await preprocessImageForOcr(file);
-    } catch (prepErr) {
-      console.warn('이미지 전처리에 실패해 원본 이미지로 인식합니다.', prepErr);
-      ocrSource = file;
+    const naturalW = cropOriginalImage.naturalWidth;
+    const naturalH = cropOriginalImage.naturalHeight;
+
+    let sx = 0, sy = 0, sw = naturalW, sh = naturalH;
+    if (cropSelection && cropSelection.w > 0 && cropSelection.h > 0) {
+      sx = Math.max(0, Math.min(cropSelection.x, naturalW - 1));
+      sy = Math.max(0, Math.min(cropSelection.y, naturalH - 1));
+      sw = Math.max(1, Math.min(cropSelection.w, naturalW - sx));
+      sh = Math.max(1, Math.min(cropSelection.h, naturalH - sy));
     }
 
-    const { data } = await Tesseract.recognize(ocrSource, 'kor+eng', {
-      logger: m => {
-        if (m.status === 'recognizing text' && typeof m.progress === 'number') {
-          setOcrLoading(true, Math.round(m.progress * 100));
-        }
-      }
-    });
+    const sourceCanvas = document.createElement('canvas');
+    sourceCanvas.width = sw;
+    sourceCanvas.height = sh;
+    sourceCanvas.getContext('2d').drawImage(cropOriginalImage, sx, sy, sw, sh, 0, 0, sw, sh);
+
+    let ocrSource;
+    try {
+      ocrSource = await preprocessImageForOcr(sourceCanvas);
+    } catch (prepErr) {
+      console.warn('이미지 전처리에 실패해 원본(크롭) 이미지로 인식합니다.', prepErr);
+      ocrSource = sourceCanvas.toDataURL('image/png');
+    }
+
+    const text = await recognizeWithTesseract(ocrSource, percent => setOcrLoading(true, percent));
     setOcrLoading(false);
 
-    console.log('[OCR RAW TEXT]\n' + (data.text || ''));
-
-    openImportDialog(data.text || '');
+    console.log('[OCR RAW TEXT]\n' + text);
+    openImportDialog(text);
   } catch (err) {
     setOcrLoading(false);
     alertUser('이미지 인식에 실패했습니다.\n다른 이미지로 다시 시도해주세요.');
@@ -936,9 +1147,23 @@ $('closeHandicapDialog').addEventListener('click', () => $('handicapDialog').clo
 $('importImageBtn').addEventListener('click', () => $('importImageInput').click());
 $('importImageInput').addEventListener('change', e => {
   const file = e.target.files && e.target.files[0];
-  handleImportImage(file);
   e.target.value = '';
+  if (file) openCropDialogWithFile(file);
 });
+
+$('cropFrame').addEventListener('pointerdown', onCropPointerDown);
+$('cropFrame').addEventListener('pointermove', onCropPointerMove);
+window.addEventListener('pointerup', onCropPointerUp);
+window.addEventListener('pointercancel', () => { cropDragStart = null; });
+
+$('cropResetBtn').addEventListener('click', clearCropSelection);
+$('closeCropDialog').addEventListener('click', closeCropDialog);
+$('cropCancelBtn').addEventListener('click', closeCropDialog);
+$('cropConfirmBtn').addEventListener('click', () => {
+  $('cropDialog').close();
+  runOcrPipeline();
+});
+
 $('closeImportDialog').addEventListener('click', () => $('importDialog').close());
 $('importCancelBtn').addEventListener('click', () => $('importDialog').close());
 $('importConfirmBtn').addEventListener('click', confirmImport);
