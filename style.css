@@ -562,7 +562,99 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
 }
 
 /* =========================================================
-   11. OCR 로딩 다이얼로그
+   11. 영역 크롭 다이얼로그 (신규)
+   ========================================================= */
+#cropDialog { width: min(96vw, 560px); }
+
+.crop-dialog-inner { max-height: 88vh; }
+
+.crop-guide {
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.6;
+  margin: 0 0 12px;
+}
+
+.crop-wrap {
+  width: 100%;
+  max-height: 62vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #000;
+  overflow: hidden;
+  margin-bottom: 12px;
+  touch-action: none;
+  -webkit-touch-callout: none;
+}
+
+.crop-frame {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  max-height: 62vh;
+  touch-action: none;
+}
+
+.crop-frame img {
+  display: block;
+  max-width: 100%;
+  max-height: 62vh;
+  width: auto;
+  height: auto;
+  user-select: none;
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
+}
+
+.crop-selection-box {
+  position: absolute;
+  display: none;
+  left: 0; top: 0;
+  border: 2px dashed var(--accent);
+  background: rgba(139, 92, 246, 0.18);
+  pointer-events: none;
+}
+
+.crop-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.crop-actions-right { display: flex; gap: 8px; }
+
+.crop-reset-btn {
+  background: var(--bg-card-2);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 13px;
+}
+.crop-cancel-btn {
+  background: var(--bg-card-2);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  border-radius: var(--radius-sm);
+  padding: 10px 16px;
+  font-size: 14px;
+}
+.crop-confirm-btn {
+  background: linear-gradient(135deg, #f472b6, var(--accent));
+  border: none;
+  color: #fff;
+  border-radius: var(--radius-sm);
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* =========================================================
+   12. OCR 로딩 다이얼로그
    ========================================================= */
 .ocr-loading-inner { text-align: center; padding: 34px 18px; }
 .ocr-spinner {
@@ -577,7 +669,7 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
 .ocr-loading-sub { font-size: 11px; color: var(--text-dim); margin: 0; }
 
 /* =========================================================
-   12. 이미지 인식 결과 확인 다이얼로그
+   13. 이미지 인식 결과 확인 다이얼로그
    ========================================================= */
 .import-guide {
   font-size: 12px;
@@ -697,7 +789,7 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
 }
 
 /* =========================================================
-   13. 인식된 원문 전체보기 다이얼로그 (신규)
+   14. 인식된 원문 전체보기 다이얼로그
    ========================================================= */
 .raw-text-dialog-inner { width: 100%; }
 #rawTextArea {
@@ -715,7 +807,7 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
 .raw-text-hint { font-size: 11px; color: var(--text-dim); margin: 8px 0 0; }
 
 /* =========================================================
-   14. 토스트
+   15. 토스트
    ========================================================= */
 .toast {
   position: fixed;
@@ -738,7 +830,7 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
 /* =========================================================
-   15. 반응형
+   16. 반응형
    ========================================================= */
 @media (max-width: 480px) {
   .app-shell { padding: 14px 12px 80px; }
@@ -747,4 +839,5 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
   .handicap-overview { flex-direction: column; }
   .import-name-input { flex-basis: 60%; }
   .import-handi-input { flex-basis: 30%; }
+  .crop-wrap, .crop-frame, .crop-frame img { max-height: 50vh; }
 }
