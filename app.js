@@ -654,6 +654,7 @@ function drawHandicap() {
 
 let importCandidates = [];
 let importSeq = 0;
+let lastRawOcrText = '';
 
 function normalizeDashChars(text) {
   // OCR이 마이너스 기호를 다양한 대시류 문자(en dash, em dash, minus sign 등)로
@@ -769,10 +770,20 @@ function syncSelectAllCheckbox() {
 }
 
 function openImportDialog(rawText) {
+  lastRawOcrText = rawText || '';
   importCandidates = parseOcrTextToCandidates(rawText);
   renderImportList();
   syncSelectAllCheckbox();
   $('importDialog').showModal();
+}
+
+function showRawTextViewer() {
+  $('rawTextArea').value = lastRawOcrText || '(인식된 텍스트가 없습니다)';
+  $('rawTextDialog').showModal();
+  setTimeout(() => {
+    $('rawTextArea').focus();
+    $('rawTextArea').select();
+  }, 50);
 }
 
 function setOcrLoading(visible, percent) {
@@ -935,6 +946,9 @@ $('importSelectAll').addEventListener('change', e => {
   importCandidates.forEach(c => c.selected = e.target.checked);
   renderImportList();
 });
+
+$('viewRawTextBtn').addEventListener('click', showRawTextViewer);
+$('closeRawTextDialog').addEventListener('click', () => $('rawTextDialog').close());
 
 $('helpBtn').addEventListener('click', () => $('helpDialog').showModal());
 $('closeHelp').addEventListener('click', () => $('helpDialog').close());
