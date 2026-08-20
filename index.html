@@ -13,7 +13,7 @@
   <link rel="apple-touch-icon-precomposed" sizes="180x180" href="apple-touch-icon.png">
   <link rel="manifest" href="manifest.webmanifest">
   <title>핀하이 정모 방뽑기</title>
-  <link rel="stylesheet" href="style.css?v=16">
+  <link rel="stylesheet" href="style.css?v=19">
 </head>
 <body>
 
@@ -91,7 +91,7 @@
         <li>방 번호를 입력하면 모바일에서는 숫자 키패드가 표시됩니다.</li>
         <li>방은 등록 후 <b>“1번 방”</b>처럼 표시되며, 좌타방으로 설정할 수 있습니다.</li>
         <li>참석자는 이름을 입력하고 핸디 버튼을 눌러 팝업에서 값을 선택합니다(−25 ~ 40). 좌타라면 토글을 켜서 등록합니다. 핸디는 필수 선택값입니다.</li>
-        <li><b>캡처 이미지로 일괄 등록(베타)</b> 버튼을 누르면 단체 채팅방 멤버 목록 캡처 등에서 이름·핸디를 자동으로 인식해 여러 명을 한 번에 등록할 수 있습니다. 인식 결과는 등록 전에 반드시 확인·수정 화면을 거치니, 잘못 인식된 항목은 직접 고치거나 체크를 해제한 뒤 등록해주세요.</li>
+        <li><b>캡처 이미지로 일괄 등록(베타)</b> 버튼을 누르면 단체 채팅방 멤버 목록 캡처 등에서 이름·핸디를 자동으로 인식해 여러 명을 한 번에 등록할 수 있습니다. 인식 결과는 등록 전에 반드시 확인·수정 화면을 거치니, 잘못 인식된 항목은 직접 고치거나 체크를 해제한 뒤 등록해주세요. 인식된 결과 화면에서 <b>🔍 인식된 원문 전체보기</b> 버튼을 누르면 잘리지 않은 전체 원문을 확인·복사할 수 있습니다.</li>
         <li>처음 등록한 참석자는 이름·핸디 정보가 참가자 DB에 저장되어 다음 모임에서도 목록에서 바로 선택할 수 있습니다.</li>
         <li>방배정은 <b>🎲 랜덤 방배정</b>과 <b>⚖️ 핸디 균형 배정</b> 중 원하는 버튼을 눌러 진행할 수 있습니다. 랜덤 방배정은 방 수와 참석자 수가 맞아야 하며, 모든 방에 2~3명이 배정되고 좌타 참석자는 좌타방에 우선 배정됩니다.</li>
         <li>핸디 균형 배정은 참석자 수를 방 개수로 나눠 각 방 인원이 최대한 균등하게 배정되며, 좌타 참석자를 좌타방에 우선 배치한 뒤 나머지 참석자들을 핸디 순으로 방마다 고르게 분산시켜 방별 실력(핸디 총합/평균)이 균형을 이루도록 자동으로 배정합니다.</li>
@@ -123,6 +123,7 @@
       <button class="close" id="closeImportDialog" aria-label="닫기">×</button>
       <h3>인식 결과 확인 · 수정</h3>
       <p class="import-guide">이미지에서 자동으로 인식한 결과입니다. 이름·핸디가 잘못 인식되었으면 직접 고쳐주세요. 좌타 여부도 다시 한 번 확인해주세요. 원치 않는 항목은 체크를 해제하면 등록되지 않습니다.</p>
+      <button type="button" class="view-raw-btn" id="viewRawTextBtn">🔍 인식된 원문 전체보기</button>
       <div class="import-select-all-row">
         <label class="import-select-all"><input type="checkbox" id="importSelectAll" checked> 전체 선택</label>
         <span id="importCountLabel">0명 인식됨</span>
@@ -135,9 +136,18 @@
     </div>
   </dialog>
 
+  <dialog id="rawTextDialog">
+    <div class="dialog-inner raw-text-dialog-inner">
+      <button class="close" id="closeRawTextDialog" aria-label="닫기">×</button>
+      <h3>인식된 원문 전체 (복사용)</h3>
+      <textarea id="rawTextArea" readonly></textarea>
+      <p class="raw-text-hint">위 텍스트를 길게 눌러 전체 선택 후 복사하면 그대로 붙여넣기 하실 수 있습니다.</p>
+    </div>
+  </dialog>
+
   <div class="toast" id="toast" role="status"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-  <script src="app.js?v=16"></script>
+  <script src="app.js?v=19"></script>
 </body>
 </html>
