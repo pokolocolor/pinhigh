@@ -87,7 +87,6 @@ function handiTag(h) {
   return `<small class="handi-tag">HDCP ${h}</small>`;
 }
 
-// -- 핸디 선택 팝업(다이얼로그) 그리드 구성 --
 function buildHandicapGrid() {
   const grid = $('handicapGrid');
   grid.innerHTML = '';
@@ -276,7 +275,6 @@ function shuffle(array) {
   return a;
 }
 
-// 좌타방 없이 좌타 참석자만 있는 경우, 두 배정 방식 공용으로 쓰는 경고 배너
 function leftRoomWarningHTML() {
   const hasLeftRoom = rooms.some(r => r.left);
   const hasLeftPeople = people.some(p => p.left);
@@ -339,10 +337,6 @@ function validateForDraw() {
   return true;
 }
 
-// =========================================================
-// 방배정 버튼 공용 상태 관리 (랜덤 / 핸디 균형 배정 공용)
-// =========================================================
-
 let isBusy = false;
 let drawRandomBtnHTML = '';
 let drawHandicapBtnHTML = '';
@@ -371,10 +365,6 @@ function resetButtons() {
   r.innerHTML = drawRandomBtnHTML;
   h.innerHTML = drawHandicapBtnHTML;
 }
-
-// =========================================================
-// 랜덤 방배정
-// =========================================================
 
 function draw() {
   if (isBusy) return;
@@ -488,14 +478,6 @@ function draw() {
 
   startRoom();
 }
-
-// =========================================================
-// 핸디 균형 배정
-// 1) 방 정원을 인원수/방개수로 최대한 균등하게 미리 계산
-// 2) 좌타 참석자를 좌타방 정원 안에서 핸디 낮은 순으로 우선 배치
-// 3) 나머지 인원을 핸디 낮은 순으로, 매번 "인원이 가장 적은 방"(동률이면
-//    평균 핸디가 가장 안 좋은 방)에 배치해 인원수와 실력을 동시에 균형
-// =========================================================
 
 function computeRoomCapacities(totalPeople, roomCount) {
   const base = Math.floor(totalPeople / roomCount);
@@ -668,9 +650,6 @@ function drawHandicap() {
 
 // =========================================================
 // 이미지(캡처) 인식 기반 참석자 일괄 등록 (베타)
-// - Tesseract.js로 이미지에서 텍스트를 추출
-// - 정규식으로 이름 / 핸디(G숫자) / 좌타 여부를 1차 파싱
-// - 사용자가 팝업에서 직접 확인·수정 후 "선택 항목 등록"을 눌러야 반영
 // =========================================================
 
 let importCandidates = [];
@@ -697,9 +676,9 @@ function parseOcrTextToCandidates(rawText) {
     const left = /좌타/.test(line);
 
     let handicap = null;
-    // "G" 뒤에 공백/콜론/괄호/점 등 숫자·하이픈이 아닌 문자가 최대 4개까지
-    // 끼어 있어도, 그 뒤에 오는 숫자(부호 포함)를 핸디 값으로 그대로 인식한다.
-    // 예) G-3 -> -3 / G: -3 -> -3 / G(3) -> 3 / G.15 -> 15
+    // "G" 또는 "g" 뒤에 숫자·하이픈이 아닌 문자가 최대 4개까지 끼어 있어도,
+    // 그 다음에 오는 숫자(부호·소수점 포함)를 그대로 핸디 값으로 인식한다.
+    // 예) G-3 -> -3 / G: -3 -> -3 / G(3) -> 3 / G9.4 -> 9.4
     const hMatch = line.match(/g[^0-9-]{0,4}(-?\d+(?:\.\d+)?)/i);
     if (hMatch) {
       const n = Number(hMatch[1]);
@@ -805,6 +784,47 @@ function setOcrLoading(visible, percent) {
   }
 }
 
+// OCR 정확도를 높이기 위한 이미지 전처리: 확대 + 그레이스케일 + 대비 강화
+async function preprocessImageForOcr(file) {
+  const dataUrl = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
+  const img = await new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = reject;
+    image.src = dataUrl;
+  });
+
+  const targetWidth = Math.max(img.width, 1600);
+  const scale = targetWidth / img.width;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(img.width * scale);
+  canvas.height = Math.round(img.height * scale);
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const data = imageData.data;
+  const contrast = 1.35;
+  const intercept = 128 * (1 - contrast);
+  for (let i = 0; i < data.length; i += 4) {
+    const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+    let v = gray * contrast + intercept;
+    v = Math.max(0, Math.min(255, v));
+    data[i] = data[i + 1] = data[i + 2] = v;
+  }
+  ctx.putImageData(imageData, 0, 0);
+
+  return canvas.toDataURL('image/png');
+}
+
 async function handleImportImage(file) {
   if (!file) return;
   if (typeof Tesseract === 'undefined') {
@@ -815,7 +835,15 @@ async function handleImportImage(file) {
   setOcrLoading(true, 0);
 
   try {
-    const { data } = await Tesseract.recognize(file, 'kor+eng', {
+    let ocrSource = file;
+    try {
+      ocrSource = await preprocessImageForOcr(file);
+    } catch (prepErr) {
+      console.warn('이미지 전처리에 실패해 원본 이미지로 인식합니다.', prepErr);
+      ocrSource = file;
+    }
+
+    const { data } = await Tesseract.recognize(ocrSource, 'kor+eng', {
       logger: m => {
         if (m.status === 'recognizing text' && typeof m.progress === 'number') {
           setOcrLoading(true, Math.round(m.progress * 100));
@@ -824,10 +852,7 @@ async function handleImportImage(file) {
     });
     setOcrLoading(false);
 
-    // ↓↓↓ 디버그용 임시 코드: 원인 파악 후 이 두 줄은 삭제해주세요 ↓↓↓
     console.log('[OCR RAW TEXT]\n' + (data.text || ''));
-    alert(data.text || '(빈 텍스트)');
-    // ↑↑↑ 디버그용 임시 코드 ↑↑↑
 
     openImportDialog(data.text || '');
   } catch (err) {
