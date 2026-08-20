@@ -13,7 +13,7 @@
   <link rel="apple-touch-icon-precomposed" sizes="180x180" href="apple-touch-icon.png">
   <link rel="manifest" href="manifest.webmanifest">
   <title>핀하이 정모 방뽑기</title>
-  <link rel="stylesheet" href="style.css?v=19">
+  <link rel="stylesheet" href="style.css?v=20">
 </head>
 <body>
 
@@ -91,7 +91,7 @@
         <li>방 번호를 입력하면 모바일에서는 숫자 키패드가 표시됩니다.</li>
         <li>방은 등록 후 <b>“1번 방”</b>처럼 표시되며, 좌타방으로 설정할 수 있습니다.</li>
         <li>참석자는 이름을 입력하고 핸디 버튼을 눌러 팝업에서 값을 선택합니다(−25 ~ 40). 좌타라면 토글을 켜서 등록합니다. 핸디는 필수 선택값입니다.</li>
-        <li><b>캡처 이미지로 일괄 등록(베타)</b> 버튼을 누르면 단체 채팅방 멤버 목록 캡처 등에서 이름·핸디를 자동으로 인식해 여러 명을 한 번에 등록할 수 있습니다. 인식 결과는 등록 전에 반드시 확인·수정 화면을 거치니, 잘못 인식된 항목은 직접 고치거나 체크를 해제한 뒤 등록해주세요. 인식된 결과 화면에서 <b>🔍 인식된 원문 전체보기</b> 버튼을 누르면 잘리지 않은 전체 원문을 확인·복사할 수 있습니다.</li>
+        <li><b>캡처 이미지로 일괄 등록(베타)</b> 버튼을 누르면 먼저 인식할 영역을 드래그로 선택하는 화면이 나타납니다. 이름·핸디가 나열된 부분만 선택하면 인식률이 높아지며, 선택하지 않고 바로 진행해도 이미지 전체로 인식합니다. 인식이 끝나면 이름·핸디를 자동으로 추출한 확인 화면이 열려 여러 명을 한 번에 등록할 수 있습니다. 인식 결과는 등록 전에 반드시 확인·수정 화면을 거치니, 잘못 인식된 항목은 직접 고치거나 체크를 해제한 뒤 등록해주세요. 인식된 결과 화면에서 <b>🔍 인식된 원문 전체보기</b> 버튼을 누르면 잘리지 않은 전체 원문을 확인·복사할 수 있습니다.</li>
         <li>처음 등록한 참석자는 이름·핸디 정보가 참가자 DB에 저장되어 다음 모임에서도 목록에서 바로 선택할 수 있습니다.</li>
         <li>방배정은 <b>🎲 랜덤 방배정</b>과 <b>⚖️ 핸디 균형 배정</b> 중 원하는 버튼을 눌러 진행할 수 있습니다. 랜덤 방배정은 방 수와 참석자 수가 맞아야 하며, 모든 방에 2~3명이 배정되고 좌타 참석자는 좌타방에 우선 배정됩니다.</li>
         <li>핸디 균형 배정은 참석자 수를 방 개수로 나눠 각 방 인원이 최대한 균등하게 배정되며, 좌타 참석자를 좌타방에 우선 배치한 뒤 나머지 참석자들을 핸디 순으로 방마다 고르게 분산시켜 방별 실력(핸디 총합/평균)이 균형을 이루도록 자동으로 배정합니다.</li>
@@ -107,6 +107,27 @@
       <button class="close" id="closeHandicapDialog" aria-label="닫기">×</button>
       <h3>핸디 선택</h3>
       <div class="handicap-grid" id="handicapGrid"></div>
+    </div>
+  </dialog>
+
+  <dialog id="cropDialog">
+    <div class="dialog-inner crop-dialog-inner">
+      <button class="close" id="closeCropDialog" aria-label="닫기">×</button>
+      <h3>인식할 영역 선택 (선택사항)</h3>
+      <p class="crop-guide">이름·핸디가 나열된 부분만 손가락(또는 마우스)으로 드래그해서 선택하면 인식률이 크게 좋아집니다. 선택하지 않고 아래 버튼을 누르면 이미지 전체로 인식합니다.</p>
+      <div class="crop-wrap" id="cropWrap">
+        <div class="crop-frame" id="cropFrame">
+          <img id="cropImagePreview" alt="캡처 이미지 미리보기" draggable="false">
+          <div class="crop-selection-box" id="cropSelectionBox"></div>
+        </div>
+      </div>
+      <div class="crop-actions">
+        <button type="button" class="crop-reset-btn" id="cropResetBtn">선택 초기화</button>
+        <div class="crop-actions-right">
+          <button type="button" class="crop-cancel-btn" id="cropCancelBtn">취소</button>
+          <button type="button" class="crop-confirm-btn" id="cropConfirmBtn">이 이미지로 인식 시작</button>
+        </div>
+      </div>
     </div>
   </dialog>
 
@@ -148,6 +169,6 @@
   <div class="toast" id="toast" role="status"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-  <script src="app.js?v=19"></script>
+  <script src="app.js?v=20"></script>
 </body>
 </html>
